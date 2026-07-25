@@ -29,8 +29,9 @@ export const Route = createFileRoute("/profile/$username")({
 function ProfilePage() {
   useApiSubscription();
   const { username } = Route.useParams();
-  const user = getUserByUsername(username);
-  if (!user) throw notFound();
+  const found = getUserByUsername(username);
+  if (!found) throw notFound();
+  const user = found;
   const me = getCurrentUserId();
   const isMe = me === user.id;
   const posts = getPostsByUser(user.id);
