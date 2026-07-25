@@ -1,24 +1,37 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { CreatePost } from "@/components/create-post";
+import { PostCard } from "@/components/post-card";
+import { getCurrentUserId, getPosts, getUser } from "@/lib/api";
+import { useApiSubscription } from "@/lib/use-api";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "Home Feed — LANbook" },
+      { name: "description", content: "Your LANbook feed: fresh posts from everyone on the network." },
+      { property: "og:title", content: "Home Feed — LANbook" },
+      { property: "og:description", content: "Your LANbook feed: fresh posts from everyone on the network." },
+    ],
+  }),
+  component: Feed,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function Feed() {
+  useApiSubscription();
+  const meId = getCurrentUserId();
+  const me = meId ? getUser(meId) : null;
+  const posts = getPosts();
+  if (!me) return null;
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="space-y-4">
+      <CreatePost me={me} />
+      {posts.length === 0 ? (
+        <div className="rounded-2xl bg-card shadow-card p-8 text-center text-muted-foreground">
+          No posts yet — be the first to share something.
+        </div>
+      ) : (
+        posts.map((p) => <PostCard key={p.id} post={p} />)
+      )}
     </div>
   );
 }
