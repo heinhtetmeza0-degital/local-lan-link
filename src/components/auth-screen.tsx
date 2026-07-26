@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserAvatar } from "./user-avatar";
-import { Camera, Users } from "lucide-react";
+import { Camera } from "lucide-react";
 import { toast } from "sonner";
+import { LangToggle, useT } from "@/lib/i18n";
 
 export function AuthScreen() {
+  const { t } = useT();
   const [mode, setMode] = useState<"in" | "up">("in");
   const [busy, setBusy] = useState(false);
   const [username, setUsername] = useState("");
@@ -22,9 +24,9 @@ export function AuthScreen() {
     try {
       if (mode === "in") signIn(username, password);
       else signUp({ username, password, displayName, bio, avatar });
-      toast.success(mode === "in" ? "Welcome back" : "Account created");
+      toast.success(mode === "in" ? t("welcomeBack") : t("accountCreated"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed");
+      toast.error(err instanceof Error ? err.message : t("failed"));
     } finally {
       setBusy(false);
     }
@@ -36,16 +38,16 @@ export function AuthScreen() {
   }
 
   return (
-    <div className="min-h-screen grid place-items-center px-4 py-8 bg-gradient-to-br from-background via-background to-accent/40">
+    <div className="min-h-screen grid place-items-center px-4 py-8 bg-gradient-to-br from-amber-50 via-background to-accent/40">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="mx-auto h-14 w-14 rounded-2xl bg-primary text-primary-foreground grid place-items-center shadow-pop mb-3">
-            <Users className="h-7 w-7" />
+        <div className="flex justify-end mb-4"><LangToggle /></div>
+        <div className="text-center mb-6">
+          <div className="mx-auto h-16 w-16 rounded-3xl bg-gradient-to-br from-amber-400 to-amber-600 text-white grid place-items-center shadow-pop mb-3">
+            <span className="text-2xl font-black">ရ</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">LANbook</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            A little social space, right on your network.
-          </p>
+          <h1 className="text-3xl font-black tracking-tight">Shwe Meza</h1>
+          <p className="mm-font text-lg font-semibold text-amber-700 -mt-0.5">ရွှေမဲဇာ</p>
+          <p className="text-sm text-muted-foreground mt-2">{t("tagline")}</p>
         </div>
 
         <form
@@ -60,7 +62,7 @@ export function AuthScreen() {
                 mode === "in" ? "bg-background shadow" : "text-muted-foreground"
               }`}
             >
-              Sign in
+              {t("signIn")}
             </button>
             <button
               type="button"
@@ -69,7 +71,7 @@ export function AuthScreen() {
                 mode === "up" ? "bg-background shadow" : "text-muted-foreground"
               }`}
             >
-              Sign up
+              {t("signUp")}
             </button>
           </div>
 
@@ -87,29 +89,29 @@ export function AuthScreen() {
                   onChange={(e) => onAvatar(e.target.files?.[0])}
                 />
               </label>
-              <p className="text-xs text-muted-foreground">Tap to add a profile photo</p>
+              <p className="text-xs text-muted-foreground">{t("addPhoto")}</p>
             </div>
           )}
 
           <div className="space-y-1.5">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="username">{t("username")}</Label>
             <Input
               id="username"
               autoCapitalize="none"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. alex"
+              placeholder={t("usernamePh")}
               required
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t("password")}</Label>
             <Input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 4 characters"
+              placeholder={t("passwordPh")}
               required
             />
           </div>
@@ -117,35 +119,36 @@ export function AuthScreen() {
           {mode === "up" && (
             <>
               <div className="space-y-1.5">
-                <Label htmlFor="dn">Display name</Label>
+                <Label htmlFor="dn">{t("displayName")}</Label>
                 <Input
                   id="dn"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Alex Rivera"
+                  placeholder={t("displayNamePh")}
                   required
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="bio">Bio</Label>
+                <Label htmlFor="bio">{t("bio")}</Label>
                 <Input
                   id="bio"
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  placeholder="A short intro (optional)"
+                  placeholder={t("bioPh")}
                 />
               </div>
             </>
           )}
 
           <Button type="submit" className="w-full rounded-full h-11" disabled={busy}>
-            {mode === "in" ? "Sign in" : "Create account"}
+            {mode === "in" ? t("signIn") : t("createAccount")}
           </Button>
 
           {mode === "in" && (
             <p className="text-center text-xs text-muted-foreground">
-              Demo accounts: <span className="font-mono">alex / demo</span> ·{" "}
-              <span className="font-mono">maya / demo</span>
+              {t("demoAccounts")}: <span className="font-mono">alex / demo</span> ·{" "}
+              <span className="font-mono">maya / demo</span> ·{" "}
+              <span className="font-mono">thura / demo</span>
             </p>
           )}
         </form>
