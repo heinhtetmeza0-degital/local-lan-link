@@ -4,13 +4,14 @@ import { Search as SearchIcon } from "lucide-react";
 import { getCurrentUserId, searchUsers, getUsers } from "@/lib/api";
 import { UserAvatar } from "@/components/user-avatar";
 import { Input } from "@/components/ui/input";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/search")({
   head: () => ({
     meta: [
-      { title: "Find people — LANbook" },
+      { title: "Find people — Shwe Meza" },
       { name: "description", content: "Search for anyone on your LAN by name or username." },
-      { property: "og:title", content: "Find people — LANbook" },
+      { property: "og:title", content: "Find people — Shwe Meza" },
       { property: "og:description", content: "Search for anyone on your LAN by name or username." },
     ],
   }),
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/search")({
 });
 
 function SearchPage() {
+  const { t } = useT();
   const [q, setQ] = useState("");
   const me = getCurrentUserId();
   const results = q.trim() ? searchUsers(q) : getUsers();
@@ -30,17 +32,17 @@ function SearchPage() {
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search people…"
+          placeholder={t("searchPeople")}
           className="pl-9 h-11 rounded-full bg-card"
           autoFocus
         />
       </div>
       <h2 className="text-sm font-semibold text-muted-foreground px-1">
-        {q.trim() ? `Results (${list.length})` : "People on the network"}
+        {q.trim() ? `${t("results")} (${list.length})` : t("peopleOnNetwork")}
       </h2>
       <div className="rounded-2xl bg-card shadow-card divide-y divide-border overflow-hidden">
         {list.length === 0 && (
-          <div className="p-6 text-center text-muted-foreground text-sm">No one found.</div>
+          <div className="p-6 text-center text-muted-foreground text-sm">{t("noneFound")}</div>
         )}
         {list.map((u) => (
           <Link

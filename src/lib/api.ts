@@ -1,14 +1,10 @@
 /**
- * Local API client for the social app.
+ * Local API client for Shwe Meza.
  *
- * This module is designed to be dropped onto a PocketBase server on your LAN
- * without changing the rest of the app. All UI code imports from `api` only.
- *
- * To switch to PocketBase later:
- *   1. `bun add pocketbase`
- *   2. Replace the implementations below with calls against the PocketBase
- *      SDK using the collections: users, posts, comments, likes, notifications.
- *   3. Keep the exported function signatures identical.
+ * PocketBase-ready: swap the internals for the PocketBase SDK later
+ * without touching UI code. Collections would map to:
+ *   users, posts, comments, likes, notifications,
+ *   conversations, messages.
  */
 
 export type User = {
@@ -19,7 +15,11 @@ export type User = {
   avatar: string | null; // data URL
 };
 
-export type Media = { kind: "image" | "video"; url: string }; // data URL
+export type Media =
+  | { kind: "image"; url: string }
+  | { kind: "video"; url: string }
+  | { kind: "audio"; url: string; duration?: number }
+  | { kind: "file"; url: string; name: string; size: number };
 
 export type Post = {
   id: string;
@@ -39,7 +39,7 @@ export type Comment = {
 
 export type Notification = {
   id: string;
-  userId: string; // recipient
+  userId: string;
   actorId: string;
   kind: "like" | "comment";
   postId: string;
@@ -47,14 +47,35 @@ export type Notification = {
   read: boolean;
 };
 
+export type Conversation = {
+  id: string;
+  kind: "dm" | "group";
+  name?: string; // group name
+  memberIds: string[];
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type Message = {
+  id: string;
+  conversationId: string;
+  authorId: string;
+  text: string;
+  media?: Media;
+  createdAt: number;
+};
+
 const K = {
-  users: "lan_users",
-  passwords: "lan_pw",
-  posts: "lan_posts",
-  comments: "lan_comments",
-  likes: "lan_likes",
-  notes: "lan_notes",
-  session: "lan_session",
+  users: "shwe_users",
+  passwords: "shwe_pw",
+  posts: "shwe_posts",
+  comments: "shwe_comments",
+  likes: "shwe_likes",
+  notes: "shwe_notes",
+  conversations: "shwe_convs",
+  messages: "shwe_msgs",
+  session: "shwe_session",
+  seeded: "shwe_seeded",
 };
 
 const listeners = new Set<() => void>();
@@ -86,46 +107,37 @@ const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(
 /* -------------------- seed -------------------- */
 function ensureSeed() {
   if (typeof window === "undefined") return;
-  if (localStorage.getItem("lan_seeded")) return;
+  if (localStorage.getItem(K.seeded)) return;
   const users: User[] = [
-    {
-      id: "u_alex",
-      username: "alex",
-      displayName: "Alex Rivera",
-      bio: "Network admin. Coffee-fueled.",
-      avatar: null,
-    },
-    {
-      id: "u_maya",
-      username: "maya",
-      displayName: "Maya Chen",
-      bio: "Design + photography on the LAN.",
-      avatar: null,
-    },
+    { id: "u_alex", username: "alex", displayName: "Alex Rivera", bio: "Network admin. Coffee-fueled.", avatar: null },
+    { id: "u_maya", username: "maya", displayName: "Maya Chen", bio: "Design + photography on the LAN.", avatar: null },
+    { id: "u_thura", username: "thura", displayName: "Thura Aung", bio: "မင်္ဂလာပါ။", avatar: null },
   ];
   const posts: Post[] = [
     {
-      id: uid(),
+      id: "p_" + uid(),
       authorId: "u_maya",
-      text: "First post on our shiny new LAN social ✨ welcome everyone!",
+      text: "First post on our shiny new social ✨ welcome everyone!",
       media: [],
       createdAt: Date.now() - 1000 * 60 * 60 * 3,
     },
     {
-      id: uid(),
-      authorId: "u_alex",
-      text: "Server rack is finally quiet. Peaceful Sunday.",
+      id: "p_" + uid(),
+      authorId: "u_thura",
+      text: "မင်္ဂလာပါ! Shwe Meza ကို ကြိုဆိုပါတယ်။",
       media: [],
-      createdAt: Date.now() - 1000 * 60 * 30,
+      createdAt: Date.now() - 1000 * 60 * 45,
     },
   ];
   write(K.users, users);
-  write(K.passwords, { alex: "demo", maya: "demo" } as Record<string, string>);
+  write(K.passwords, { alex: "demo", maya: "demo", thura: "demo" } as Record<string, string>);
   write(K.posts, posts);
   write(K.comments, [] as Comment[]);
   write(K.likes, {} as Record<string, string[]>);
   write(K.notes, [] as Notification[]);
-  localStorage.setItem("lan_seeded", "1");
+  write(K.conversations, [] as Conversation[]);
+  write(K.messages, [] as Message[]);
+  localStorage.setItem(K.seeded, "1");
 }
 
 /* -------------------- auth -------------------- */
@@ -303,6 +315,83 @@ export function markAllRead(userId: string) {
   write(K.notes, all);
 }
 
+/* -------------------- conversations & messages -------------------- */
+export function getConversations(userId: string): Conversation[] {
+  ensureSeed();
+  return read<Conversation[]>(K.conversations, [])
+    .filter((c) => c.memberIds.includes(userId))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+export function getConversation(id: string): Conversation | undefined {
+  return read<Conversation[]>(K.conversations, []).find((c) => c.id === id);
+}
+function saveConversation(c: Conversation) {
+  const all = read<Conversation[]>(K.conversations, []);
+  const idx = all.findIndex((x) => x.id === c.id);
+  if (idx >= 0) all[idx] = c;
+  else all.unshift(c);
+  write(K.conversations, all);
+}
+export function openDirectConversation(otherUserId: string): Conversation {
+  const me = getCurrentUserId();
+  if (!me) throw new Error("Not signed in");
+  const pair = [me, otherUserId].sort();
+  const id = "dm_" + pair.join("_");
+  const existing = getConversation(id);
+  if (existing) return existing;
+  const c: Conversation = {
+    id,
+    kind: "dm",
+    memberIds: pair,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+  saveConversation(c);
+  return c;
+}
+export function createGroup(name: string, memberIds: string[]): Conversation {
+  const me = getCurrentUserId();
+  if (!me) throw new Error("Not signed in");
+  const members = Array.from(new Set([me, ...memberIds]));
+  if (members.length < 2) throw new Error("Add at least one member");
+  const c: Conversation = {
+    id: "g_" + uid(),
+    kind: "group",
+    name: name.trim() || "Group",
+    memberIds: members,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+  saveConversation(c);
+  return c;
+}
+export function getMessages(conversationId: string): Message[] {
+  return read<Message[]>(K.messages, [])
+    .filter((m) => m.conversationId === conversationId)
+    .sort((a, b) => a.createdAt - b.createdAt);
+}
+export function sendMessage(conversationId: string, text: string, media?: Media): Message {
+  const me = getCurrentUserId();
+  if (!me) throw new Error("Not signed in");
+  if (!text.trim() && !media) throw new Error("Empty message");
+  const m: Message = {
+    id: "m_" + uid(),
+    conversationId,
+    authorId: me,
+    text: text.trim(),
+    media,
+    createdAt: Date.now(),
+  };
+  write(K.messages, [...read<Message[]>(K.messages, []), m]);
+  const conv = getConversation(conversationId);
+  if (conv) saveConversation({ ...conv, updatedAt: Date.now() });
+  return m;
+}
+export function lastMessage(conversationId: string): Message | undefined {
+  const list = getMessages(conversationId);
+  return list[list.length - 1];
+}
+
 /* -------------------- helpers -------------------- */
 export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -310,5 +399,13 @@ export function fileToDataUrl(file: File): Promise<string> {
     r.onload = () => resolve(r.result as string);
     r.onerror = reject;
     r.readAsDataURL(file);
+  });
+}
+export function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = reject;
+    r.readAsDataURL(blob);
   });
 }

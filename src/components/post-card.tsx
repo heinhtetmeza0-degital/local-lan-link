@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Heart, MessageCircle, Send, Trash2 } from "lucide-react";
+import { Heart, MessageCircle, Send, Share2, Trash2 } from "lucide-react";
 import {
   type Post,
   addComment,
@@ -17,9 +17,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useApiSubscription } from "@/lib/use-api";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
+import { VoicePlayer } from "./voice-recorder";
+import { toast } from "sonner";
 
 export function PostCard({ post }: { post: Post }) {
   useApiSubscription();
+  const { t, lang } = useT();
   const author = getUser(post.authorId);
   const me = getCurrentUserId();
   const likes = getLikes(post.id);
@@ -36,6 +40,18 @@ export function PostCard({ post }: { post: Post }) {
     setOpen(true);
   };
 
+  const share = async () => {
+    const url = typeof window !== "undefined" ? window.location.origin + "/" : "";
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Shwe Meza", text: post.text || "Shwe Meza", url });
+      } else {
+        await navigator.clipboard?.writeText(url + " " + (post.text || ""));
+        toast.success(t("linkCopied"));
+      }
+    } catch { /* cancelled */ }
+  };
+
   return (
     <article className="rounded-2xl bg-card text-card-foreground shadow-card overflow-hidden">
       <header className="flex items-center gap-3 p-4">
@@ -48,7 +64,7 @@ export function PostCard({ post }: { post: Post }) {
           <div className="min-w-0">
             <div className="font-semibold truncate">{author?.displayName ?? "Unknown"}</div>
             <div className="text-xs text-muted-foreground">
-              @{author?.username} · {timeAgo(post.createdAt)}
+              @{author?.username} · {timeAgo(post.createdAt, lang)}
             </div>
           </div>
         </Link>
@@ -67,20 +83,34 @@ export function PostCard({ post }: { post: Post }) {
         <p className="px-4 pb-3 whitespace-pre-wrap leading-relaxed">{post.text}</p>
       )}
 
-      {post.media.length > 0 && (
+      {post.media.some((m) => m.kind === "audio") && (
+        <div className="px-4 pb-3 space-y-2">
+          {post.media
+            .filter((m) => m.kind === "audio")
+            .map((m, i) => (
+              <VoicePlayer key={i} url={(m as { url: string }).url} duration={(m as { duration?: number }).duration} />
+            ))}
+        </div>
+      )}
+
+      {post.media.filter((m) => m.kind === "image" || m.kind === "video").length > 0 && (
         <div
           className={cn(
             "grid gap-0.5 bg-border",
-            post.media.length === 1 ? "grid-cols-1" : "grid-cols-2",
+            post.media.filter((m) => m.kind === "image" || m.kind === "video").length === 1
+              ? "grid-cols-1"
+              : "grid-cols-2",
           )}
         >
-          {post.media.map((m, i) =>
-            m.kind === "image" ? (
-              <img key={i} src={m.url} alt="" className="w-full max-h-[520px] object-cover" />
-            ) : (
-              <video key={i} src={m.url} controls className="w-full max-h-[520px] bg-black" />
-            ),
-          )}
+          {post.media
+            .filter((m) => m.kind === "image" || m.kind === "video")
+            .map((m, i) =>
+              m.kind === "image" ? (
+                <img key={i} src={m.url} alt="" className="w-full max-h-[520px] object-cover" />
+              ) : (
+                <video key={i} src={m.url} controls className="w-full max-h-[520px] bg-black" />
+              ),
+            )}
         </div>
       )}
 
@@ -93,16 +123,21 @@ export function PostCard({ post }: { post: Post }) {
           )}
         >
           <Heart className={cn("h-5 w-5", liked && "fill-current")} />
-          <span className="text-sm font-medium">{likes.length || ""} Like</span>
+          <span className="text-sm font-medium">{likes.length || ""} {t("like")}</span>
         </button>
         <button
           onClick={() => setOpen((v) => !v)}
           className="flex-1 inline-flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-accent transition-colors"
         >
           <MessageCircle className="h-5 w-5" />
-          <span className="text-sm font-medium">
-            {comments.length || ""} Comment
-          </span>
+          <span className="text-sm font-medium">{comments.length || ""} {t("comment")}</span>
+        </button>
+        <button
+          onClick={share}
+          className="flex-1 inline-flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-accent transition-colors"
+        >
+          <Share2 className="h-5 w-5" />
+          <span className="text-sm font-medium">{t("share")}</span>
         </button>
       </div>
 
@@ -119,7 +154,7 @@ export function PostCard({ post }: { post: Post }) {
                     <div className="text-sm whitespace-pre-wrap">{c.text}</div>
                   </div>
                   <div className="text-[10px] text-muted-foreground mt-1 ml-2">
-                    {timeAgo(c.createdAt)}
+                    {timeAgo(c.createdAt, lang)}
                   </div>
                 </div>
               </div>
@@ -130,7 +165,7 @@ export function PostCard({ post }: { post: Post }) {
               <Input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="Write a comment…"
+                placeholder={t("writeComment")}
                 className="rounded-full bg-background"
               />
               <Button type="submit" size="icon" className="rounded-full" disabled={!text.trim()}>

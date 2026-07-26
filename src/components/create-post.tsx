@@ -4,10 +4,14 @@ import { Button } from "@/components/ui/button";
 import { UserAvatar } from "./user-avatar";
 import { createPost, fileToDataUrl, type Media, type User } from "@/lib/api";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
+import { VoiceRecorder, VoicePlayer, type VoiceResult } from "./voice-recorder";
 
 export function CreatePost({ me }: { me: User }) {
+  const { t } = useT();
   const [text, setText] = useState("");
   const [media, setMedia] = useState<Media[]>([]);
+  const [voice, setVoice] = useState<VoiceResult | null>(null);
   const [busy, setBusy] = useState(false);
   const imgRef = useRef<HTMLInputElement>(null);
   const vidRef = useRef<HTMLInputElement>(null);
@@ -28,15 +32,18 @@ export function CreatePost({ me }: { me: User }) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!text.trim() && media.length === 0) return;
+    const all: Media[] = [...media];
+    if (voice) all.push({ kind: "audio", url: voice.url, duration: voice.duration });
+    if (!text.trim() && all.length === 0) return;
     setBusy(true);
     try {
-      createPost(text, media);
+      createPost(text, all);
       setText("");
       setMedia([]);
-      toast.success("Posted");
+      setVoice(null);
+      toast.success(t("posted"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed");
+      toast.error(err instanceof Error ? err.message : t("failed"));
     } finally {
       setBusy(false);
     }
@@ -52,7 +59,7 @@ export function CreatePost({ me }: { me: User }) {
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={`What's on your mind, ${me.displayName.split(" ")[0]}?`}
+          placeholder={`${t("whatsOnMind")}, ${me.displayName.split(" ")[0]}?`}
           rows={2}
           className="flex-1 resize-none bg-muted rounded-2xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-ring text-sm"
         />
@@ -64,9 +71,9 @@ export function CreatePost({ me }: { me: User }) {
             <div key={i} className="relative rounded-xl overflow-hidden bg-muted">
               {m.kind === "image" ? (
                 <img src={m.url} className="w-full h-32 object-cover" alt="" />
-              ) : (
+              ) : m.kind === "video" ? (
                 <video src={m.url} className="w-full h-32 object-cover" />
-              )}
+              ) : null}
               <button
                 type="button"
                 onClick={() => setMedia((x) => x.filter((_, j) => j !== i))}
@@ -79,15 +86,19 @@ export function CreatePost({ me }: { me: User }) {
         </div>
       )}
 
-      <div className="flex items-center justify-between border-t border-border pt-3">
-        <div className="flex gap-1">
+      {voice && (
+        <VoicePlayer url={voice.url} duration={voice.duration} />
+      )}
+
+      <div className="flex items-center justify-between border-t border-border pt-3 gap-2 flex-wrap">
+        <div className="flex gap-1 flex-wrap">
           <button
             type="button"
             onClick={() => imgRef.current?.click()}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-accent text-sm text-muted-foreground"
           >
             <ImageIcon className="h-4 w-4 text-emerald-500" />
-            Photo
+            {t("photo")}
           </button>
           <button
             type="button"
@@ -95,8 +106,9 @@ export function CreatePost({ me }: { me: User }) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-accent text-sm text-muted-foreground"
           >
             <Film className="h-4 w-4 text-sky-500" />
-            Video
+            {t("video")}
           </button>
+          {!voice && <VoiceRecorder onDone={setVoice} />}
           <input
             ref={imgRef}
             type="file"
@@ -115,11 +127,11 @@ export function CreatePost({ me }: { me: User }) {
         </div>
         <Button
           type="submit"
-          disabled={busy || (!text.trim() && media.length === 0)}
+          disabled={busy || (!text.trim() && media.length === 0 && !voice)}
           className="rounded-full"
         >
           <Send className="h-4 w-4 mr-1" />
-          Post
+          {t("post")}
         </Button>
       </div>
     </form>

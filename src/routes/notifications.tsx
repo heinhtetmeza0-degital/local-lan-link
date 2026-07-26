@@ -10,13 +10,14 @@ import {
 import { useApiSubscription } from "@/lib/use-api";
 import { UserAvatar } from "@/components/user-avatar";
 import { timeAgo } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({
     meta: [
-      { title: "Notifications — LANbook" },
+      { title: "Notifications — Shwe Meza" },
       { name: "description", content: "See who liked and commented on your posts." },
-      { property: "og:title", content: "Notifications — LANbook" },
+      { property: "og:title", content: "Notifications — Shwe Meza" },
       { property: "og:description", content: "See who liked and commented on your posts." },
     ],
   }),
@@ -25,17 +26,18 @@ export const Route = createFileRoute("/notifications")({
 
 function NotificationsPage() {
   useApiSubscription();
+  const { t, lang } = useT();
   const me = getCurrentUserId();
   useEffect(() => { if (me) markAllRead(me); }, [me]);
   if (!me) return null;
   const notes = getNotifications(me);
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold px-1">Notifications</h1>
+      <h1 className="text-xl font-bold px-1">{t("notifications")}</h1>
       <div className="rounded-2xl bg-card shadow-card divide-y divide-border overflow-hidden">
         {notes.length === 0 && (
           <div className="p-8 text-center text-muted-foreground text-sm">
-            No notifications yet.
+            {t("noNotifs")}
           </div>
         )}
         {notes.map((n) => {
@@ -57,9 +59,9 @@ function NotificationsPage() {
               <div className="min-w-0 flex-1">
                 <p className="text-sm">
                   <span className="font-semibold">{actor?.displayName}</span>{" "}
-                  {n.kind === "like" ? "liked your post" : "commented on your post"}.
+                  {n.kind === "like" ? t("likedYourPost") : t("commentedYourPost")}.
                 </p>
-                <p className="text-xs text-muted-foreground">{timeAgo(n.createdAt)}</p>
+                <p className="text-xs text-muted-foreground">{timeAgo(n.createdAt, lang)}</p>
               </div>
             </Link>
           );
