@@ -1,8 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Bell, Home, LogOut, MessageCircle, Search, User as UserIcon } from "lucide-react";
+import { Bell, Home, MessageCircle, Search, Settings as SettingsIcon, Shield, User as UserIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { UserAvatar } from "./user-avatar";
-import { signOut, unreadCount, type User } from "@/lib/api";
+import { GoldBadge } from "./gold-badge";
+import { ShweMezaLogo } from "./logo";
+import { isAdmin, unreadCount, type User } from "@/lib/api";
 import { useApiSubscription } from "@/lib/use-api";
 import { cn } from "@/lib/utils";
 import { LangToggle, useT } from "@/lib/i18n";
@@ -12,6 +14,7 @@ export function AppShell({ me, children }: { me: User; children: ReactNode }) {
   const { t } = useT();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const unread = unreadCount(me.id);
+  const admin = isAdmin(me.id);
 
   const nav = [
     { to: "/", label: t("home"), icon: Home, match: (p: string) => p === "/" },
@@ -33,14 +36,12 @@ export function AppShell({ me, children }: { me: User; children: ReactNode }) {
   ] as const;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-30 bg-background/85 backdrop-blur border-b border-border">
         <div className="max-w-2xl mx-auto grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 sm:px-4 h-14">
           <Link to="/" className="flex items-center gap-2 font-bold min-w-0">
-            <span className="h-9 w-9 shrink-0 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-white grid place-items-center shadow-pop">
-              <span className="text-sm font-black">ရ</span>
-            </span>
-            <span className="hidden xs:inline sm:inline leading-tight">
+            <ShweMezaLogo size={36} />
+            <span className="leading-tight">
               <span className="block text-sm font-black tracking-tight">Shwe Meza</span>
               <span className="block text-[10px] font-medium text-muted-foreground mm-font">ရွှေမဲဇာ</span>
             </span>
@@ -70,24 +71,53 @@ export function AppShell({ me, children }: { me: User; children: ReactNode }) {
             })}
           </nav>
 
-          <div className="flex items-center gap-2 justify-self-end">
+          <div className="flex items-center gap-1 justify-self-end">
             <LangToggle />
-            <button
-              onClick={signOut}
-              className="text-muted-foreground hover:text-foreground p-2 rounded-lg"
-              aria-label={t("signOut")}
-              title={t("signOut")}
+            {admin && (
+              <Link
+                to="/admin"
+                className={cn(
+                  "p-2 rounded-lg",
+                  pathname.startsWith("/admin")
+                    ? "text-primary bg-accent"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+                title={t("admin")}
+                aria-label={t("admin")}
+              >
+                <Shield className="h-5 w-5" />
+              </Link>
+            )}
+            <Link
+              to="/settings"
+              className={cn(
+                "p-2 rounded-lg",
+                pathname.startsWith("/settings")
+                  ? "text-primary bg-accent"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              title={t("settings")}
+              aria-label={t("settings")}
             >
-              <LogOut className="h-5 w-5" />
-            </button>
-            <Link to={`/profile/${me.username}`}>
+              <SettingsIcon className="h-5 w-5" />
+            </Link>
+            <Link to={`/profile/${me.username}`} className="relative">
               <UserAvatar user={me} size={32} />
+              {me.verified && (
+                <span className="absolute -bottom-0.5 -right-0.5 bg-card rounded-full p-[1px]">
+                  <GoldBadge size={12} />
+                </span>
+              )}
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-3 sm:px-4 py-4 pb-24 md:pb-8">{children}</main>
+      <main className="max-w-2xl mx-auto w-full px-3 sm:px-4 py-4 pb-24 md:pb-8 flex-1">{children}</main>
+
+      <footer className="hidden md:block max-w-2xl mx-auto w-full px-4 py-4 text-center text-xs text-muted-foreground">
+        {t("credit")}
+      </footer>
 
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t border-border">
         <div className="max-w-2xl mx-auto grid grid-cols-5">

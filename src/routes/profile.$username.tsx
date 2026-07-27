@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useT } from "@/lib/i18n";
 import { CallButtons, CallModal } from "@/components/call-modal";
+import { GoldBadge } from "@/components/gold-badge";
 import { MessageCircle } from "lucide-react";
 
 export const Route = createFileRoute("/profile/$username")({
@@ -102,7 +103,10 @@ function ProfilePage() {
             </div>
           ) : (
             <div className="mt-3">
-              <h1 className="text-xl font-bold">{user.displayName}</h1>
+              <h1 className="text-xl font-bold flex items-center gap-1.5">
+                {user.displayName}
+                {user.verified && <GoldBadge size={18} />}
+              </h1>
               <p className="text-sm text-muted-foreground">@{user.username}</p>
               {user.bio && <p className="mt-2 text-sm">{user.bio}</p>}
               <div className="mt-3 flex gap-6 text-sm">

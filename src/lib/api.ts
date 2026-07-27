@@ -2,9 +2,7 @@
  * Local API client for Shwe Meza.
  *
  * PocketBase-ready: swap the internals for the PocketBase SDK later
- * without touching UI code. Collections would map to:
- *   users, posts, comments, likes, notifications,
- *   conversations, messages.
+ * without touching UI code.
  */
 
 export type User = {
@@ -13,6 +11,8 @@ export type User = {
   displayName: string;
   bio: string;
   avatar: string | null; // data URL
+  verified?: boolean;
+  isAdmin?: boolean;
 };
 
 export type Media =
@@ -50,7 +50,7 @@ export type Notification = {
 export type Conversation = {
   id: string;
   kind: "dm" | "group";
-  name?: string; // group name
+  name?: string;
   memberIds: string[];
   createdAt: number;
   updatedAt: number;
@@ -65,6 +65,34 @@ export type Message = {
   createdAt: number;
 };
 
+export type ReportReason = "spam" | "harassment" | "inappropriate" | "misinformation" | "other";
+export type Report = {
+  id: string;
+  postId: string;
+  reporterId: string;
+  reason: ReportReason;
+  detail?: string;
+  status: "pending" | "resolved" | "dismissed";
+  createdAt: number;
+};
+
+export type GoldRequest = {
+  id: string;
+  userId: string;
+  reason: string;
+  proof?: string; // data URL
+  status: "pending" | "approved" | "rejected";
+  createdAt: number;
+};
+
+export type Ad = {
+  id: string;
+  title: string;
+  image: string; // data URL or http
+  link: string;
+  createdAt: number;
+};
+
 const K = {
   users: "shwe_users",
   passwords: "shwe_pw",
@@ -74,8 +102,11 @@ const K = {
   notes: "shwe_notes",
   conversations: "shwe_convs",
   messages: "shwe_msgs",
+  reports: "shwe_reports",
+  gold: "shwe_gold",
+  ads: "shwe_ads",
   session: "shwe_session",
-  seeded: "shwe_seeded",
+  seeded: "shwe_seeded_v2",
 };
 
 const listeners = new Set<() => void>();
@@ -109,7 +140,7 @@ function ensureSeed() {
   if (typeof window === "undefined") return;
   if (localStorage.getItem(K.seeded)) return;
   const users: User[] = [
-    { id: "u_alex", username: "alex", displayName: "Alex Rivera", bio: "Network admin. Coffee-fueled.", avatar: null },
+    { id: "u_alex", username: "alex", displayName: "Alex Rivera", bio: "Network admin. Coffee-fueled.", avatar: null, isAdmin: true, verified: true },
     { id: "u_maya", username: "maya", displayName: "Maya Chen", bio: "Design + photography on the LAN.", avatar: null },
     { id: "u_thura", username: "thura", displayName: "Thura Aung", bio: "မင်္ဂလာပါ။", avatar: null },
   ];
@@ -137,6 +168,9 @@ function ensureSeed() {
   write(K.notes, [] as Notification[]);
   write(K.conversations, [] as Conversation[]);
   write(K.messages, [] as Message[]);
+  write(K.reports, [] as Report[]);
+  write(K.gold, [] as GoldRequest[]);
+  write(K.ads, [] as Ad[]);
   localStorage.setItem(K.seeded, "1");
 }
 
@@ -193,6 +227,18 @@ export function signOut() {
   emit();
 }
 
+export function changePassword(current: string, next: string) {
+  const me = getCurrentUserId();
+  if (!me) throw new Error("Not signed in");
+  const user = getUser(me);
+  if (!user) throw new Error("Not signed in");
+  if (next.length < 4) throw new Error("Password must be at least 4 characters.");
+  const pw = read<Record<string, string>>(K.passwords, {});
+  if (pw[user.username] !== current) throw new Error("Current password is incorrect.");
+  pw[user.username] = next;
+  write(K.passwords, pw);
+}
+
 /* -------------------- users -------------------- */
 export function getUsers(): User[] {
   ensureSeed();
@@ -217,6 +263,10 @@ export function searchUsers(q: string): User[] {
     (u) => u.username.includes(s) || u.displayName.toLowerCase().includes(s),
   );
 }
+export function isAdmin(userId: string | null | undefined): boolean {
+  if (!userId) return false;
+  return !!getUser(userId)?.isAdmin;
+}
 
 /* -------------------- posts -------------------- */
 export function getPosts(): Post[] {
@@ -225,6 +275,9 @@ export function getPosts(): Post[] {
 }
 export function getPostsByUser(userId: string): Post[] {
   return getPosts().filter((p) => p.authorId === userId);
+}
+export function getPost(id: string): Post | undefined {
+  return read<Post[]>(K.posts, []).find((p) => p.id === id);
 }
 export function createPost(text: string, media: Media[] = []): Post {
   const me = getCurrentUserId();
@@ -242,7 +295,10 @@ export function createPost(text: string, media: Media[] = []): Post {
 }
 export function deletePost(id: string) {
   const me = getCurrentUserId();
-  const posts = read<Post[]>(K.posts, []).filter((p) => !(p.id === id && p.authorId === me));
+  const admin = isAdmin(me);
+  const posts = read<Post[]>(K.posts, []).filter(
+    (p) => !(p.id === id && (admin || p.authorId === me)),
+  );
   write(K.posts, posts);
 }
 
@@ -390,6 +446,102 @@ export function sendMessage(conversationId: string, text: string, media?: Media)
 export function lastMessage(conversationId: string): Message | undefined {
   const list = getMessages(conversationId);
   return list[list.length - 1];
+}
+
+/* -------------------- reports -------------------- */
+export function reportPost(postId: string, reason: ReportReason, detail?: string): Report {
+  const me = getCurrentUserId();
+  if (!me) throw new Error("Not signed in");
+  const r: Report = {
+    id: "r_" + uid(),
+    postId,
+    reporterId: me,
+    reason,
+    detail: detail?.trim() || undefined,
+    status: "pending",
+    createdAt: Date.now(),
+  };
+  write(K.reports, [r, ...read<Report[]>(K.reports, [])]);
+  return r;
+}
+export function getReports(status?: Report["status"]): Report[] {
+  const all = read<Report[]>(K.reports, []);
+  return (status ? all.filter((r) => r.status === status) : all).sort(
+    (a, b) => b.createdAt - a.createdAt,
+  );
+}
+export function setReportStatus(id: string, status: Report["status"]) {
+  if (!isAdmin(getCurrentUserId())) throw new Error("Admin only");
+  const all = read<Report[]>(K.reports, []).map((r) => (r.id === id ? { ...r, status } : r));
+  write(K.reports, all);
+}
+
+/* -------------------- gold verification -------------------- */
+export function requestGoldMark(reason: string, proof?: string): GoldRequest {
+  const me = getCurrentUserId();
+  if (!me) throw new Error("Not signed in");
+  if (!reason.trim()) throw new Error("Please provide a reason");
+  const g: GoldRequest = {
+    id: "g_" + uid(),
+    userId: me,
+    reason: reason.trim(),
+    proof,
+    status: "pending",
+    createdAt: Date.now(),
+  };
+  write(K.gold, [g, ...read<GoldRequest[]>(K.gold, [])]);
+  return g;
+}
+export function getGoldRequests(status?: GoldRequest["status"]): GoldRequest[] {
+  const all = read<GoldRequest[]>(K.gold, []);
+  return (status ? all.filter((g) => g.status === status) : all).sort(
+    (a, b) => b.createdAt - a.createdAt,
+  );
+}
+export function getMyGoldRequest(): GoldRequest | undefined {
+  const me = getCurrentUserId();
+  if (!me) return undefined;
+  return getGoldRequests().find((g) => g.userId === me);
+}
+export function approveGold(id: string) {
+  if (!isAdmin(getCurrentUserId())) throw new Error("Admin only");
+  const reqs = read<GoldRequest[]>(K.gold, []);
+  const target = reqs.find((r) => r.id === id);
+  if (!target) return;
+  const updated = reqs.map((r) => (r.id === id ? { ...r, status: "approved" as const } : r));
+  const users = getUsers().map((u) => (u.id === target.userId ? { ...u, verified: true } : u));
+  write(K.users, users);
+  write(K.gold, updated);
+}
+export function rejectGold(id: string) {
+  if (!isAdmin(getCurrentUserId())) throw new Error("Admin only");
+  const updated = read<GoldRequest[]>(K.gold, []).map((r) =>
+    r.id === id ? { ...r, status: "rejected" as const } : r,
+  );
+  write(K.gold, updated);
+}
+
+/* -------------------- ads -------------------- */
+export function getAds(): Ad[] {
+  ensureSeed();
+  return read<Ad[]>(K.ads, []).sort((a, b) => b.createdAt - a.createdAt);
+}
+export function createAd(input: { title: string; image: string; link: string }): Ad {
+  if (!isAdmin(getCurrentUserId())) throw new Error("Admin only");
+  if (!input.title.trim() || !input.image) throw new Error("Title and image are required");
+  const ad: Ad = {
+    id: "ad_" + uid(),
+    title: input.title.trim(),
+    image: input.image,
+    link: input.link.trim(),
+    createdAt: Date.now(),
+  };
+  write(K.ads, [ad, ...read<Ad[]>(K.ads, [])]);
+  return ad;
+}
+export function deleteAd(id: string) {
+  if (!isAdmin(getCurrentUserId())) throw new Error("Admin only");
+  write(K.ads, read<Ad[]>(K.ads, []).filter((a) => a.id !== id));
 }
 
 /* -------------------- helpers -------------------- */
