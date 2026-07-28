@@ -484,21 +484,34 @@ export function setReportStatus(id: string, status: Report["status"]) {
 }
 
 /* -------------------- gold verification -------------------- */
-export function requestGoldMark(reason: string, proof?: string): GoldRequest {
+export function requestGoldMark(input: {
+  reason: string;
+  dob?: string;
+  idImage?: string;
+  selfieVideo?: string;
+  proof?: string;
+}): GoldRequest {
   const me = getCurrentUserId();
   if (!me) throw new Error("Not signed in");
-  if (!reason.trim()) throw new Error("Please provide a reason");
+  if (!input.reason.trim()) throw new Error("Please provide a reason");
+  if (!input.dob) throw new Error("Date of birth is required");
+  if (!input.idImage) throw new Error("ID document image is required");
+  if (!input.selfieVideo) throw new Error("Selfie verification video is required");
   const g: GoldRequest = {
     id: "g_" + uid(),
     userId: me,
-    reason: reason.trim(),
-    proof,
+    reason: input.reason.trim(),
+    dob: input.dob,
+    idImage: input.idImage,
+    selfieVideo: input.selfieVideo,
+    proof: input.proof,
     status: "pending",
     createdAt: Date.now(),
   };
   write(K.gold, [g, ...read<GoldRequest[]>(K.gold, [])]);
   return g;
 }
+
 export function getGoldRequests(status?: GoldRequest["status"]): GoldRequest[] {
   const all = read<GoldRequest[]>(K.gold, []);
   return (status ? all.filter((g) => g.status === status) : all).sort(
