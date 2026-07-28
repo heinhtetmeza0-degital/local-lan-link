@@ -147,6 +147,12 @@ function ProfilePage() {
           className={`flex-1 py-2 rounded-full ${tab === "photos" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
           {t("photos")}
         </button>
+        {isMe && (
+          <button onClick={() => setTab("saved")}
+            className={`flex-1 py-2 rounded-full inline-flex items-center justify-center gap-1 ${tab === "saved" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+            <Bookmark className="h-3.5 w-3.5" /> {t("saved")}
+          </button>
+        )}
       </div>
 
       {tab === "posts" && (
@@ -172,6 +178,17 @@ function ProfilePage() {
           </div>
         )
       )}
+
+      {tab === "saved" && isMe && (
+        <div className="space-y-4">
+          {savedPosts.length === 0 ? (
+            <div className="rounded-2xl bg-card shadow-card p-8 text-center text-muted-foreground">
+              {t("noSavedPosts")}
+            </div>
+          ) : savedPosts.map((p) => <PostCard key={p.id} post={p} />)}
+        </div>
+      )}
+
 
       {call && !isMe && (
         <CallModal peer={user} kind={call} onClose={() => setCall(null)} />
