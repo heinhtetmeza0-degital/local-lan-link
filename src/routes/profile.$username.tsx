@@ -45,12 +45,14 @@ function ProfilePage() {
   const isMe = me === user.id;
   const posts = getPostsByUser(user.id);
   const photos = posts.flatMap((p) => p.media.filter((m) => m.kind === "image")) as { url: string }[];
+  const savedPosts = isMe ? getSavedPosts(user.id) : [];
 
-  const [tab, setTab] = useState<"posts" | "photos">("posts");
+  const [tab, setTab] = useState<"posts" | "photos" | "saved">("posts");
   const [editing, setEditing] = useState(false);
   const [dn, setDn] = useState(user.displayName);
   const [bio, setBio] = useState(user.bio);
   const [call, setCall] = useState<"audio" | "video" | null>(null);
+
 
   function save() {
     updateProfile({ displayName: dn.trim() || user.displayName, bio: bio.trim() });
