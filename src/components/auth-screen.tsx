@@ -44,9 +44,10 @@ export function AuthScreen() {
       <div className="w-full max-w-md">
         <div className="flex justify-end mb-4"><LangToggle /></div>
         <div className="text-center mb-6">
-          <div className="mx-auto h-16 w-16 rounded-3xl bg-gradient-to-br from-amber-400 to-amber-600 text-white grid place-items-center shadow-pop mb-3">
-            <span className="text-2xl font-black">ရ</span>
+          <div className="mx-auto mb-3 w-fit">
+            <ShweMezaLogo size={72} className="rounded-3xl" />
           </div>
+
           <h1 className="text-3xl font-black tracking-tight">Shwe Meza</h1>
           <p className="mm-font text-lg font-semibold text-amber-700 -mt-0.5">ရွှေမဲဇာ</p>
           <p className="text-sm text-muted-foreground mt-2">{t("tagline")}</p>
