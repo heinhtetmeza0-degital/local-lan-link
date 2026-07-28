@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Flag, Heart, MessageCircle, MoreHorizontal, Send, Share2, Trash2 } from "lucide-react";
+import { Bookmark, Flag, Heart, MessageCircle, MoreHorizontal, Send, Share2, Trash2 } from "lucide-react";
 import {
   type Post,
   addComment,
@@ -10,8 +10,11 @@ import {
   getLikes,
   getUser,
   isAdmin,
+  isPostSaved,
   toggleLike,
+  toggleSavePost,
 } from "@/lib/api";
+
 import { UserAvatar } from "./user-avatar";
 import { GoldBadge } from "./gold-badge";
 import { ReportDialog } from "./report-dialog";
