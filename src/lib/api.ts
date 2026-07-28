@@ -564,6 +564,47 @@ export function deleteAd(id: string) {
   write(K.ads, read<Ad[]>(K.ads, []).filter((a) => a.id !== id));
 }
 
+/* -------------------- saved posts -------------------- */
+export function getSaved(): Record<string, string[]> {
+  return read<Record<string, string[]>>(K.saved, {});
+}
+export function isPostSaved(postId: string): boolean {
+  const me = getCurrentUserId();
+  if (!me) return false;
+  return (getSaved()[me] ?? []).includes(postId);
+}
+export function toggleSavePost(postId: string) {
+  const me = getCurrentUserId();
+  if (!me) throw new Error("Not signed in");
+  const all = getSaved();
+  const cur = all[me] ?? [];
+  all[me] = cur.includes(postId) ? cur.filter((x) => x !== postId) : [postId, ...cur];
+  write(K.saved, all);
+}
+export function getSavedPosts(userId: string): Post[] {
+  const ids = getSaved()[userId] ?? [];
+  const posts = read<Post[]>(K.posts, []);
+  return ids
+    .map((id) => posts.find((p) => p.id === id))
+    .filter((p): p is Post => Boolean(p));
+}
+
+/* -------------------- biometric setting -------------------- */
+export function getBiometricEnabled(): boolean {
+  const me = getCurrentUserId();
+  if (!me) return false;
+  const map = read<Record<string, boolean>>(K.biometric, {});
+  return !!map[me];
+}
+export function setBiometricEnabled(enabled: boolean) {
+  const me = getCurrentUserId();
+  if (!me) throw new Error("Not signed in");
+  const map = read<Record<string, boolean>>(K.biometric, {});
+  map[me] = enabled;
+  write(K.biometric, map);
+}
+
+
 /* -------------------- helpers -------------------- */
 export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
