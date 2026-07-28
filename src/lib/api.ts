@@ -80,10 +80,14 @@ export type GoldRequest = {
   id: string;
   userId: string;
   reason: string;
-  proof?: string; // data URL
+  proof?: string; // data URL (legacy)
+  dob?: string; // ISO yyyy-mm-dd
+  idImage?: string; // data URL — NRC / Driver's License
+  selfieVideo?: string; // data URL — verification video
   status: "pending" | "approved" | "rejected";
   createdAt: number;
 };
+
 
 export type Ad = {
   id: string;
