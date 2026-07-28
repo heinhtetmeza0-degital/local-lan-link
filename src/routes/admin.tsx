@@ -186,7 +186,32 @@ function GoldTab() {
               )}>{r.status}</span>
             </div>
             <p className="text-sm whitespace-pre-wrap">{r.reason}</p>
-            {r.proof && <img src={r.proof} alt="" className="rounded-lg max-h-48" />}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              {r.dob && (
+                <div className="rounded-lg bg-muted/50 p-2">
+                  <div className="text-muted-foreground">{t("dob")}</div>
+                  <div className="font-semibold">{r.dob}</div>
+                </div>
+              )}
+              {r.idImage && (
+                <div className="rounded-lg bg-muted/50 p-2">
+                  <div className="text-muted-foreground mb-1">{t("idDocument")}</div>
+                  <img src={r.idImage} alt="" className="rounded-md max-h-40 w-full object-contain bg-black/5" />
+                </div>
+              )}
+              {r.selfieVideo && (
+                <div className="rounded-lg bg-muted/50 p-2 sm:col-span-2">
+                  <div className="text-muted-foreground mb-1">{t("selfieVideo")}</div>
+                  <video src={r.selfieVideo} controls className="rounded-md max-h-56 w-full bg-black" />
+                </div>
+              )}
+              {r.proof && (
+                <div className="rounded-lg bg-muted/50 p-2 sm:col-span-2">
+                  <div className="text-muted-foreground mb-1">{t("proofOptional")}</div>
+                  <img src={r.proof} alt="" className="rounded-md max-h-40" />
+                </div>
+              )}
+            </div>
             {r.status === "pending" && (
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => { approveGold(r.id); toast.success(t("statusApproved")); }}>
@@ -197,6 +222,7 @@ function GoldTab() {
                 </Button>
               </div>
             )}
+
           </div>
         );
       })}

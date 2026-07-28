@@ -80,10 +80,14 @@ export type GoldRequest = {
   id: string;
   userId: string;
   reason: string;
-  proof?: string; // data URL
+  proof?: string; // data URL (legacy)
+  dob?: string; // ISO yyyy-mm-dd
+  idImage?: string; // data URL — NRC / Driver's License
+  selfieVideo?: string; // data URL — verification video
   status: "pending" | "approved" | "rejected";
   createdAt: number;
 };
+
 
 export type Ad = {
   id: string;
@@ -105,9 +109,12 @@ const K = {
   reports: "shwe_reports",
   gold: "shwe_gold",
   ads: "shwe_ads",
+  saved: "shwe_saved",
+  biometric: "shwe_biometric",
   session: "shwe_session",
   seeded: "shwe_seeded_v2",
 };
+
 
 const listeners = new Set<() => void>();
 export function subscribe(fn: () => void) {
@@ -477,21 +484,34 @@ export function setReportStatus(id: string, status: Report["status"]) {
 }
 
 /* -------------------- gold verification -------------------- */
-export function requestGoldMark(reason: string, proof?: string): GoldRequest {
+export function requestGoldMark(input: {
+  reason: string;
+  dob?: string;
+  idImage?: string;
+  selfieVideo?: string;
+  proof?: string;
+}): GoldRequest {
   const me = getCurrentUserId();
   if (!me) throw new Error("Not signed in");
-  if (!reason.trim()) throw new Error("Please provide a reason");
+  if (!input.reason.trim()) throw new Error("Please provide a reason");
+  if (!input.dob) throw new Error("Date of birth is required");
+  if (!input.idImage) throw new Error("ID document image is required");
+  if (!input.selfieVideo) throw new Error("Selfie verification video is required");
   const g: GoldRequest = {
     id: "g_" + uid(),
     userId: me,
-    reason: reason.trim(),
-    proof,
+    reason: input.reason.trim(),
+    dob: input.dob,
+    idImage: input.idImage,
+    selfieVideo: input.selfieVideo,
+    proof: input.proof,
     status: "pending",
     createdAt: Date.now(),
   };
   write(K.gold, [g, ...read<GoldRequest[]>(K.gold, [])]);
   return g;
 }
+
 export function getGoldRequests(status?: GoldRequest["status"]): GoldRequest[] {
   const all = read<GoldRequest[]>(K.gold, []);
   return (status ? all.filter((g) => g.status === status) : all).sort(
@@ -543,6 +563,47 @@ export function deleteAd(id: string) {
   if (!isAdmin(getCurrentUserId())) throw new Error("Admin only");
   write(K.ads, read<Ad[]>(K.ads, []).filter((a) => a.id !== id));
 }
+
+/* -------------------- saved posts -------------------- */
+export function getSaved(): Record<string, string[]> {
+  return read<Record<string, string[]>>(K.saved, {});
+}
+export function isPostSaved(postId: string): boolean {
+  const me = getCurrentUserId();
+  if (!me) return false;
+  return (getSaved()[me] ?? []).includes(postId);
+}
+export function toggleSavePost(postId: string) {
+  const me = getCurrentUserId();
+  if (!me) throw new Error("Not signed in");
+  const all = getSaved();
+  const cur = all[me] ?? [];
+  all[me] = cur.includes(postId) ? cur.filter((x) => x !== postId) : [postId, ...cur];
+  write(K.saved, all);
+}
+export function getSavedPosts(userId: string): Post[] {
+  const ids = getSaved()[userId] ?? [];
+  const posts = read<Post[]>(K.posts, []);
+  return ids
+    .map((id) => posts.find((p) => p.id === id))
+    .filter((p): p is Post => Boolean(p));
+}
+
+/* -------------------- biometric setting -------------------- */
+export function getBiometricEnabled(): boolean {
+  const me = getCurrentUserId();
+  if (!me) return false;
+  const map = read<Record<string, boolean>>(K.biometric, {});
+  return !!map[me];
+}
+export function setBiometricEnabled(enabled: boolean) {
+  const me = getCurrentUserId();
+  if (!me) throw new Error("Not signed in");
+  const map = read<Record<string, boolean>>(K.biometric, {});
+  map[me] = enabled;
+  write(K.biometric, map);
+}
+
 
 /* -------------------- helpers -------------------- */
 export function fileToDataUrl(file: File): Promise<string> {

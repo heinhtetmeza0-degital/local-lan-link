@@ -9,7 +9,7 @@ export function ShweMezaLogo({ size = 36, className }: { size?: number; classNam
     <span
       className={cn(
         "shrink-0 grid place-items-center rounded-2xl shadow-pop overflow-hidden",
-        "bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700",
+        "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 ring-1 ring-amber-500/30",
         className,
       )}
       style={{ width: size, height: size }}
@@ -17,42 +17,52 @@ export function ShweMezaLogo({ size = 36, className }: { size?: number; classNam
     >
       <svg
         viewBox="0 0 48 48"
-        width={size}
-        height={size}
+        width={Math.round(size * 0.82)}
+        height={Math.round(size * 0.82)}
         role="img"
         aria-hidden="true"
         className="block"
       >
-        {/* Sun */}
-        <circle cx="34" cy="14" r="3.2" fill="#fff8e1" opacity="0.9" />
-        {/* Back mountain */}
+        <defs>
+          <linearGradient id="smGold" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#fde68a" />
+            <stop offset="55%" stopColor="#f59e0b" />
+            <stop offset="100%" stopColor="#b45309" />
+          </linearGradient>
+          <linearGradient id="smRiver" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#38bdf8" />
+            <stop offset="100%" stopColor="#0284c7" />
+          </linearGradient>
+        </defs>
+        {/* Back mountain silhouette */}
         <path
-          d="M2 38 L18 14 L28 30 L36 20 L46 38 Z"
-          fill="#fffdf5"
-          opacity="0.35"
+          d="M2 40 L18 14 L28 30 L36 20 L46 40 Z"
+          fill="url(#smGold)"
+          opacity="0.45"
         />
         {/* Front two mountains — the 'M' */}
         <path
-          d="M2 40 L14 16 L24 32 L34 12 L46 40 Z"
-          fill="#ffffff"
+          d="M2 42 L14 14 L24 32 L34 10 L46 42 Z"
+          fill="url(#smGold)"
         />
         {/* River — the 'S' flowing between the peaks */}
         <path
-          d="M8 40 C 16 34, 20 40, 24 36 S 34 32, 42 40"
+          d="M8 40 C 16 32, 20 42, 24 36 S 34 30, 42 40"
           fill="none"
-          stroke="#0ea5e9"
-          strokeWidth="2.4"
+          stroke="url(#smRiver)"
+          strokeWidth="3"
           strokeLinecap="round"
         />
         <path
-          d="M10 42 C 18 38, 22 44, 26 40 S 34 36, 42 42"
+          d="M10 43 C 18 38, 22 45, 26 41 S 34 37, 42 43"
           fill="none"
-          stroke="#38bdf8"
+          stroke="#7dd3fc"
           strokeWidth="1.4"
           strokeLinecap="round"
-          opacity="0.75"
+          opacity="0.85"
         />
       </svg>
     </span>
   );
 }
+

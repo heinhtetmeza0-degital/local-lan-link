@@ -1,10 +1,11 @@
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Camera, Pencil, Check, X } from "lucide-react";
+import { Camera, Pencil, Check, X, Bookmark } from "lucide-react";
 import {
   fileToDataUrl,
   getCurrentUserId,
   getPostsByUser,
+  getSavedPosts,
   getUserByUsername,
   openDirectConversation,
   updateProfile,
@@ -18,6 +19,7 @@ import { useT } from "@/lib/i18n";
 import { CallButtons, CallModal } from "@/components/call-modal";
 import { GoldBadge } from "@/components/gold-badge";
 import { MessageCircle } from "lucide-react";
+
 
 export const Route = createFileRoute("/profile/$username")({
   head: ({ params }) => ({
@@ -43,12 +45,14 @@ function ProfilePage() {
   const isMe = me === user.id;
   const posts = getPostsByUser(user.id);
   const photos = posts.flatMap((p) => p.media.filter((m) => m.kind === "image")) as { url: string }[];
+  const savedPosts = isMe ? getSavedPosts(user.id) : [];
 
-  const [tab, setTab] = useState<"posts" | "photos">("posts");
+  const [tab, setTab] = useState<"posts" | "photos" | "saved">("posts");
   const [editing, setEditing] = useState(false);
   const [dn, setDn] = useState(user.displayName);
   const [bio, setBio] = useState(user.bio);
   const [call, setCall] = useState<"audio" | "video" | null>(null);
+
 
   function save() {
     updateProfile({ displayName: dn.trim() || user.displayName, bio: bio.trim() });
@@ -143,6 +147,12 @@ function ProfilePage() {
           className={`flex-1 py-2 rounded-full ${tab === "photos" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
           {t("photos")}
         </button>
+        {isMe && (
+          <button onClick={() => setTab("saved")}
+            className={`flex-1 py-2 rounded-full inline-flex items-center justify-center gap-1 ${tab === "saved" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+            <Bookmark className="h-3.5 w-3.5" /> {t("saved")}
+          </button>
+        )}
       </div>
 
       {tab === "posts" && (
@@ -168,6 +178,17 @@ function ProfilePage() {
           </div>
         )
       )}
+
+      {tab === "saved" && isMe && (
+        <div className="space-y-4">
+          {savedPosts.length === 0 ? (
+            <div className="rounded-2xl bg-card shadow-card p-8 text-center text-muted-foreground">
+              {t("noSavedPosts")}
+            </div>
+          ) : savedPosts.map((p) => <PostCard key={p.id} post={p} />)}
+        </div>
+      )}
+
 
       {call && !isMe && (
         <CallModal peer={user} kind={call} onClose={() => setCall(null)} />
