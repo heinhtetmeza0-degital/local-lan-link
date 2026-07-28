@@ -168,7 +168,48 @@ const dict: Dict = {
   addAd: { en: "Publish ad", mm: "ကြော်ငြာတင်" },
   sponsored: { en: "Sponsored", mm: "ကြော်ငြာ" },
   credit: { en: "Created by Hein Htet Soe", mm: "ဖန်တီးသူ - ဟိန်းထက်စိုး" },
+
+  // Save
+  savePost: { en: "Save post", mm: "ပို့စ်အား သိမ်းဆည်းမည်" },
+  unsavePost: { en: "Unsave post", mm: "သိမ်းဆည်းမှုဖျက်" },
+  postSaved: { en: "Post saved", mm: "ပို့စ်ကို သိမ်းပြီးပါပြီ" },
+  postUnsaved: { en: "Post unsaved", mm: "သိမ်းဆည်းမှုကို ဖျက်ပြီးပါပြီ" },
+  saved: { en: "Saved", mm: "သိမ်းထားသည်" },
+  savedPosts: { en: "Saved posts", mm: "သိမ်းထားသောပို့စ်များ" },
+  noSavedPosts: { en: "No saved posts yet.", mm: "သိမ်းထားသောပို့စ်မရှိသေးပါ။" },
+
+  // KYC
+  kyc: { en: "KYC verification", mm: "ကိုယ်ရေးအထောက်အထား" },
+  dob: { en: "Date of birth", mm: "မွေးသက္ကရာဇ်" },
+  idDocument: { en: "National ID (NRC) or Driver's License", mm: "မှတ်ပုံတင် သို့ ယာဉ်မောင်းလိုင်စင်" },
+  idUploadHint: { en: "Upload a clear photo of your ID (front side).", mm: "မှတ်ပုံတင်၏ ရှေ့ဖက်ကို ရှင်းလင်းစွာ ရိုက်တင်ပါ။" },
+  selfieVideo: { en: "Selfie verification video", mm: "ကိုယ်တိုင်အတည်ပြု ဗီဒီယို" },
+  selfieVideoHint: {
+    en: "Record a short selfie video showing your face straight, then turning slightly left and right.",
+    mm: "မျက်နှာ တည့်တည့်၊ ဘယ်ဘက် တစ်ချက်၊ ညာဘက် တစ်ချက် လှည့်ပြသည့် အသံဖမ်းဗီဒီယို တင်ပါ။",
+  },
+  uploadVideo: { en: "Upload video", mm: "ဗီဒီယိုတင်" },
+  kycNote: {
+    en: "Your KYC documents are sent to the admin for review and are stored securely on this device.",
+    mm: "KYC စာရွက်စာတမ်းများကို အက်ဒမင်ထံ စစ်ဆေးရန်ပို့ပြီး ဤစက်တွင် လုံခြုံစွာ သိမ်းဆည်းပါသည်။",
+  },
+
+  // Biometric
+  biometric: { en: "Biometric unlock", mm: "လက်ဗွေ / မျက်နှာ လုံခြုံရေး" },
+  biometricDesc: {
+    en: "Enable Fingerprint or Face Unlock as an extra layer of app lock protection.",
+    mm: "လက်ဗွေ သို့ မျက်နှာဖြင့် အက်ပ်လော့ခ်ဖွင့်ရန် ဖွင့်ထားပါ။",
+  },
+  biometricEnabled: { en: "Biometric unlock enabled", mm: "လက်ဗွေအတည်ပြု ဖွင့်ထားပြီး" },
+  biometricDisabled: { en: "Biometric unlock disabled", mm: "လက်ဗွေအတည်ပြု ပိတ်ထားသည်" },
+  biometricUnsupported: {
+    en: "This device does not support platform biometrics.",
+    mm: "ဤစက်တွင် biometric စနစ်မရှိပါ။",
+  },
+  enable: { en: "Enable", mm: "ဖွင့်" },
+  disable: { en: "Disable", mm: "ပိတ်" },
 };
+
 
 type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: (k: keyof typeof dict) => string };
 
