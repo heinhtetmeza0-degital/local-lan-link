@@ -102,6 +102,20 @@ export function PostCard({ post }: { post: Post }) {
           </button>
           {menu && (
             <div className="absolute right-0 top-full mt-1 w-56 rounded-xl bg-popover shadow-pop border border-border z-20 py-1">
+              {me && (
+                <button
+                  onClick={() => {
+                    setMenu(false);
+                    const wasSaved = isPostSaved(post.id);
+                    toggleSavePost(post.id);
+                    toast.success(wasSaved ? t("postUnsaved") : t("postSaved"));
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                >
+                  <Bookmark className={cn("h-4 w-4", isPostSaved(post.id) && "fill-current text-amber-600")} />
+                  {isPostSaved(post.id) ? t("unsavePost") : t("savePost")}
+                </button>
+              )}
               {me && me !== post.authorId && (
                 <button
                   onClick={() => { setMenu(false); setReporting(true); }}
@@ -118,9 +132,9 @@ export function PostCard({ post }: { post: Post }) {
                   <Trash2 className="h-4 w-4" /> {t("deletePost")}
                 </button>
               )}
-              {!me || (me === post.authorId && !canDelete) ? null : null}
             </div>
           )}
+
         </div>
       </header>
 
