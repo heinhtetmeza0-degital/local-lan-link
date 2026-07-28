@@ -1,10 +1,11 @@
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Camera, Pencil, Check, X } from "lucide-react";
+import { Camera, Pencil, Check, X, Bookmark } from "lucide-react";
 import {
   fileToDataUrl,
   getCurrentUserId,
   getPostsByUser,
+  getSavedPosts,
   getUserByUsername,
   openDirectConversation,
   updateProfile,
@@ -18,6 +19,7 @@ import { useT } from "@/lib/i18n";
 import { CallButtons, CallModal } from "@/components/call-modal";
 import { GoldBadge } from "@/components/gold-badge";
 import { MessageCircle } from "lucide-react";
+
 
 export const Route = createFileRoute("/profile/$username")({
   head: ({ params }) => ({
