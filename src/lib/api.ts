@@ -109,9 +109,12 @@ const K = {
   reports: "shwe_reports",
   gold: "shwe_gold",
   ads: "shwe_ads",
+  saved: "shwe_saved",
+  biometric: "shwe_biometric",
   session: "shwe_session",
   seeded: "shwe_seeded_v2",
 };
+
 
 const listeners = new Set<() => void>();
 export function subscribe(fn: () => void) {
