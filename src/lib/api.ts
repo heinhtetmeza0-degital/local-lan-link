@@ -5,6 +5,18 @@
  * without touching UI code.
  */
 
+import {
+  hashPassword,
+  verifyPassword,
+  signPrivileges,
+  verifyPrivileges,
+  encryptSensitive,
+  decryptSensitive,
+  type PasswordRecord,
+} from "./crypto";
+
+
+
 export type User = {
   id: string;
   username: string;
@@ -100,6 +112,7 @@ export type Ad = {
 const K = {
   users: "shwe_users",
   passwords: "shwe_pw",
+  priv: "shwe_priv",
   posts: "shwe_posts",
   comments: "shwe_comments",
   likes: "shwe_likes",
@@ -114,6 +127,7 @@ const K = {
   session: "shwe_session",
   seeded: "shwe_seeded_v2",
 };
+
 
 
 const listeners = new Set<() => void>();
@@ -143,11 +157,37 @@ function write<T>(key: string, value: T) {
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
 /* -------------------- seed -------------------- */
+const MIGRATED_KEY = "shwe_secure_migrated_v1";
+
+/** One-time upgrade of older installs: hash passwords, sign privileged flags. */
+function ensureSecureMigration() {
+  if (typeof window === "undefined") return;
+  if (localStorage.getItem(MIGRATED_KEY)) return;
+  localStorage.setItem(MIGRATED_KEY, "1");
+  // rewrites any plain-text password as a salted hash
+  readPasswords();
+  const rawUsers = read<User[]>(K.users, []);
+  const store = readPrivStore();
+  for (const u of rawUsers) {
+    if (store[u.id]) continue;
+    if (u.isAdmin || u.verified) setPrivileges(u.id, { isAdmin: !!u.isAdmin, verified: !!u.verified });
+  }
+  // strip the now-untrusted flags from the raw user records
+  write(
+    K.users,
+    rawUsers.map(({ isAdmin: _a, verified: _v, ...rest }) => rest),
+  );
+}
+
 function ensureSeed() {
   if (typeof window === "undefined") return;
-  if (localStorage.getItem(K.seeded)) return;
+  if (localStorage.getItem(K.seeded)) {
+    ensureSecureMigration();
+    return;
+  }
+
   const users: User[] = [
-    { id: "u_alex", username: "alex", displayName: "Alex Rivera", bio: "Network admin. Coffee-fueled.", avatar: null, isAdmin: true, verified: true },
+    { id: "u_alex", username: "alex", displayName: "Alex Rivera", bio: "Network admin. Coffee-fueled.", avatar: null },
     { id: "u_maya", username: "maya", displayName: "Maya Chen", bio: "Design + photography on the LAN.", avatar: null },
     { id: "u_thura", username: "thura", displayName: "Thura Aung", bio: "မင်္ဂလာပါ။", avatar: null },
   ];
@@ -168,7 +208,12 @@ function ensureSeed() {
     },
   ];
   write(K.users, users);
-  write(K.passwords, { alex: "demo", maya: "demo", thura: "demo" } as Record<string, string>);
+  write(K.passwords, {
+    alex: hashPassword("demo"),
+    maya: hashPassword("demo"),
+    thura: hashPassword("demo"),
+  });
+  write(K.priv, {});
   write(K.posts, posts);
   write(K.comments, [] as Comment[]);
   write(K.likes, {} as Record<string, string[]>);
@@ -179,6 +224,56 @@ function ensureSeed() {
   write(K.gold, [] as GoldRequest[]);
   write(K.ads, [] as Ad[]);
   localStorage.setItem(K.seeded, "1");
+  // Owner account privileges are written through the signed store only.
+  setPrivileges("u_alex", { isAdmin: true, verified: true });
+
+}
+
+/* -------------------- credentials (hashed, never plain text) -------------------- */
+type StoredPasswords = Record<string, PasswordRecord>;
+
+function readPasswords(): StoredPasswords {
+  const raw = read<Record<string, unknown>>(K.passwords, {});
+  let migrated = false;
+  const out: StoredPasswords = {};
+  for (const [username, value] of Object.entries(raw)) {
+    if (typeof value === "string") {
+      // legacy plain-text password found — upgrade to a salted hash immediately
+      out[username] = hashPassword(value);
+      migrated = true;
+    } else {
+      out[username] = value as PasswordRecord;
+    }
+  }
+  if (migrated) write(K.passwords, out);
+  return out;
+}
+
+/* -------------------- privileged flags (integrity signed) -------------------- */
+type PrivRecord = { isAdmin: boolean; verified: boolean; sig: string };
+
+function readPrivStore(): Record<string, PrivRecord> {
+  return read<Record<string, PrivRecord>>(K.priv, {});
+}
+function privilegesFor(userId: string): { isAdmin: boolean; verified: boolean } {
+  const rec = readPrivStore()[userId];
+  if (!rec || !verifyPrivileges(userId, !!rec.isAdmin, !!rec.verified, rec.sig)) {
+    // Tampered or missing signature => no privileges at all.
+    return { isAdmin: false, verified: false };
+  }
+  return { isAdmin: !!rec.isAdmin, verified: !!rec.verified };
+}
+function setPrivileges(userId: string, patch: { isAdmin?: boolean; verified?: boolean }) {
+  const store = readPrivStore();
+  const current = privilegesFor(userId);
+  const isAdminFlag = patch.isAdmin ?? current.isAdmin;
+  const verifiedFlag = patch.verified ?? current.verified;
+  store[userId] = {
+    isAdmin: isAdminFlag,
+    verified: verifiedFlag,
+    sig: signPrivileges(userId, isAdminFlag, verifiedFlag),
+  };
+  write(K.priv, store);
 }
 
 /* -------------------- auth -------------------- */
@@ -208,10 +303,11 @@ export function signUp(input: {
     bio: input.bio?.trim() ?? "",
     avatar: input.avatar ?? null,
   };
-  const pw = read<Record<string, string>>(K.passwords, {});
-  pw[username] = input.password;
+  const pw = readPasswords();
+  pw[username] = hashPassword(input.password);
   write(K.users, [...users, user]);
   write(K.passwords, pw);
+  setPrivileges(user.id, { isAdmin: false, verified: false });
   localStorage.setItem(K.session, user.id);
   emit();
   return user;
@@ -220,10 +316,10 @@ export function signUp(input: {
 export function signIn(username: string, password: string): User {
   ensureSeed();
   const u = username.trim().toLowerCase();
-  const pw = read<Record<string, string>>(K.passwords, {});
+  const pw = readPasswords();
   const users = read<User[]>(K.users, []);
   const user = users.find((x) => x.username === u);
-  if (!user || pw[u] !== password) throw new Error("Invalid username or password.");
+  if (!user || !verifyPassword(password, pw[u])) throw new Error("Invalid username or password.");
   localStorage.setItem(K.session, user.id);
   emit();
   return user;
@@ -240,16 +336,22 @@ export function changePassword(current: string, next: string) {
   const user = getUser(me);
   if (!user) throw new Error("Not signed in");
   if (next.length < 4) throw new Error("Password must be at least 4 characters.");
-  const pw = read<Record<string, string>>(K.passwords, {});
-  if (pw[user.username] !== current) throw new Error("Current password is incorrect.");
-  pw[user.username] = next;
+  const pw = readPasswords();
+  if (!verifyPassword(current, pw[user.username]))
+    throw new Error("Current password is incorrect.");
+  pw[user.username] = hashPassword(next);
   write(K.passwords, pw);
 }
 
 /* -------------------- users -------------------- */
 export function getUsers(): User[] {
   ensureSeed();
-  return read<User[]>(K.users, []);
+  // Privileged flags always come from the signed store, never from the raw
+  // user record, so editing localStorage cannot grant admin/verified status.
+  return read<User[]>(K.users, []).map((u) => {
+    const priv = privilegesFor(u.id);
+    return { ...u, isAdmin: priv.isAdmin, verified: priv.verified };
+  });
 }
 export function getUser(id: string): User | undefined {
   return getUsers().find((u) => u.id === id);
@@ -260,7 +362,11 @@ export function getUserByUsername(username: string): User | undefined {
 export function updateProfile(patch: Partial<Omit<User, "id" | "username">>) {
   const me = getCurrentUserId();
   if (!me) throw new Error("Not signed in");
-  const users = getUsers().map((u) => (u.id === me ? { ...u, ...patch } : u));
+  // Never let a profile update carry privileged flags.
+  const { isAdmin: _ignoredAdmin, verified: _ignoredVerified, ...safe } = patch;
+  void _ignoredAdmin;
+  void _ignoredVerified;
+  const users = read<User[]>(K.users, []).map((u) => (u.id === me ? { ...u, ...safe } : u));
   write(K.users, users);
 }
 export function searchUsers(q: string): User[] {
@@ -272,8 +378,9 @@ export function searchUsers(q: string): User[] {
 }
 export function isAdmin(userId: string | null | undefined): boolean {
   if (!userId) return false;
-  return !!getUser(userId)?.isAdmin;
+  return privilegesFor(userId).isAdmin;
 }
+
 
 /* -------------------- posts -------------------- */
 export function getPosts(): Post[] {
@@ -501,10 +608,11 @@ export function requestGoldMark(input: {
     id: "g_" + uid(),
     userId: me,
     reason: input.reason.trim(),
-    dob: input.dob,
-    idImage: input.idImage,
-    selfieVideo: input.selfieVideo,
-    proof: input.proof,
+    // Sensitive KYC data is encrypted at rest — never stored as raw data URLs.
+    dob: encryptSensitive(input.dob),
+    idImage: encryptSensitive(input.idImage),
+    selfieVideo: encryptSensitive(input.selfieVideo),
+    proof: input.proof ? encryptSensitive(input.proof) : undefined,
     status: "pending",
     createdAt: Date.now(),
   };
@@ -512,11 +620,27 @@ export function requestGoldMark(input: {
   return g;
 }
 
+/** Only the reviewing admin (or the owner) may see decrypted KYC material. */
+function revealKyc(g: GoldRequest, allowed: boolean): GoldRequest {
+  if (!allowed) {
+    return { ...g, dob: undefined, idImage: undefined, selfieVideo: undefined, proof: undefined };
+  }
+  return {
+    ...g,
+    dob: decryptSensitive(g.dob),
+    idImage: decryptSensitive(g.idImage),
+    selfieVideo: decryptSensitive(g.selfieVideo),
+    proof: decryptSensitive(g.proof),
+  };
+}
+
 export function getGoldRequests(status?: GoldRequest["status"]): GoldRequest[] {
+  const me = getCurrentUserId();
+  const admin = isAdmin(me);
   const all = read<GoldRequest[]>(K.gold, []);
-  return (status ? all.filter((g) => g.status === status) : all).sort(
-    (a, b) => b.createdAt - a.createdAt,
-  );
+  return (status ? all.filter((g) => g.status === status) : all)
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .map((g) => revealKyc(g, admin || g.userId === me));
 }
 export function getMyGoldRequest(): GoldRequest | undefined {
   const me = getCurrentUserId();
@@ -529,10 +653,10 @@ export function approveGold(id: string) {
   const target = reqs.find((r) => r.id === id);
   if (!target) return;
   const updated = reqs.map((r) => (r.id === id ? { ...r, status: "approved" as const } : r));
-  const users = getUsers().map((u) => (u.id === target.userId ? { ...u, verified: true } : u));
-  write(K.users, users);
+  setPrivileges(target.userId, { verified: true });
   write(K.gold, updated);
 }
+
 export function rejectGold(id: string) {
   if (!isAdmin(getCurrentUserId())) throw new Error("Admin only");
   const updated = read<GoldRequest[]>(K.gold, []).map((r) =>
