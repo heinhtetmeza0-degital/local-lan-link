@@ -10,7 +10,7 @@ import logoUrl from "@/assets/shwe-meza-logo-512.png";
 export function ShweMezaLogo({ size = 36, className }: { size?: number; className?: string }) {
   return (
     <img
-      src={logoAsset.url}
+      src={logoUrl}
       alt="Shwe Meza"
       width={size}
       height={size}
