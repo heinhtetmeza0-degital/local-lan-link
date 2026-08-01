@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Shwe Meza</string>
+    <string name="title_activity_main">Shwe Meza</string>
+    <string name="package_name">com.heinhtetsoe.shwemeza</string>
+    <string name="custom_url_scheme">com.heinhtetsoe.shwemeza</string>
+</resources>
