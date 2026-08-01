@@ -1,5 +1,7 @@
 import { cn } from "@/lib/utils";
-import logoAsset from "@/assets/shwe-meza-logo.png.asset.json";
+// Bundled locally so the logo also renders offline / inside the native apps.
+import logoUrl from "@/assets/shwe-meza-logo-512.png";
+
 
 /**
  * Shwe Meza logo — golden 'M' mountains with a blue 'S' river flowing between them,
