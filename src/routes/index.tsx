@@ -12,7 +12,7 @@ export const Route = createFileRoute("/")({
       { title: "Shwe Meza — Social on your local network" },
       { name: "description", content: "Shwe Meza (ရွှေမဲဇာ) — a bilingual EN/MM social space with posts, chat, voice notes and calls on your LAN." },
       { property: "og:title", content: "Shwe Meza — Social on your local network" },
-      { property: "og:description", content: "Bilingual EN/MM social + messenger for your LAN." },
+      { property: "og:description", content: "Shwe Meza (ရွှေမဲဇာ) — a bilingual EN/MM social space with posts, chat, voice notes and calls on your LAN." },
     ],
   }),
   component: Feed,
