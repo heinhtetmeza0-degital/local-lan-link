@@ -15,6 +15,7 @@ import { AppShell } from "@/components/app-shell";
 import { useCurrentUser } from "@/lib/use-api";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/lib/i18n";
+import { registerServiceWorker } from "@/lib/register-sw";
 
 function NotFoundComponent() {
   return (
@@ -63,10 +64,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "Shwe Meza (ရွှေမဲဇာ) — a bilingual EN/MM social space with posts, chat, voice notes and calls on your LAN." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/HMymPl364NeTKt5Vd7K9kSgSxEm1/social-images/social-1785581749908-social-image.webp" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/HMymPl364NeTKt5Vd7K9kSgSxEm1/social-images/social-1785581749908-social-image.webp" },
+      { name: "theme-color", content: "#0b0f14" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "Shwe Meza" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
@@ -105,6 +113,9 @@ function AuthGate() {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
   return (
     <LanguageProvider>
       <QueryClientProvider client={queryClient}>
