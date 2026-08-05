@@ -15,6 +15,7 @@ import { AppShell } from "@/components/app-shell";
 import { useCurrentUser } from "@/lib/use-api";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/lib/i18n";
+import { registerServiceWorker } from "@/lib/register-sw";
 
 function NotFoundComponent() {
   return (
