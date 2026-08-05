@@ -112,6 +112,9 @@ function AuthGate() {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
   return (
     <LanguageProvider>
       <QueryClientProvider client={queryClient}>
