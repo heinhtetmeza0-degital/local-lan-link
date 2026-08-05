@@ -63,6 +63,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "Shwe Meza (ရွှေမဲဇာ) — a bilingual EN/MM social space with posts, chat, voice notes and calls on your LAN." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/HMymPl364NeTKt5Vd7K9kSgSxEm1/social-images/social-1785581749908-social-image.webp" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/HMymPl364NeTKt5Vd7K9kSgSxEm1/social-images/social-1785581749908-social-image.webp" },
+      { name: "theme-color", content: "#0b0f14" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "Shwe Meza" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
