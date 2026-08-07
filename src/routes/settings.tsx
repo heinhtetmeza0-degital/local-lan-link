@@ -34,7 +34,7 @@ function SettingsPage() {
   useApiSubscription();
   const { t } = useT();
   const me = useCurrentUser();
-  const [tab, setTab] = useState<"security" | "gold">("security");
+  const [tab, setTab] = useState<"security" | "gold" | "server">("security");
   if (!me) return null;
 
   return (
