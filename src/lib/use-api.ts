@@ -3,7 +3,18 @@ import { subscribe, getCurrentUserId, getUser } from "./api";
 
 export function useApiSubscription() {
   return useSyncExternalStore(
-    (cb) => subscribe(cb),
+    (cb) => {
+      const unsub = subscribe(cb);
+      const onSync = () => {
+        counter++;
+        cb();
+      };
+      if (typeof window !== "undefined") window.addEventListener("shwe-synced", onSync);
+      return () => {
+        unsub();
+        if (typeof window !== "undefined") window.removeEventListener("shwe-synced", onSync);
+      };
+    },
     () => tick(),
     () => 0,
   );
