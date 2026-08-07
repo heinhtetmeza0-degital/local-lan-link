@@ -120,6 +120,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   useEffect(() => {
     registerServiceWorker();
+    startAutoSync();
   }, []);
   return (
     <LanguageProvider>
