@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { KeyRound, ShieldCheck, LogOut, Fingerprint, ShieldAlert } from "lucide-react";
+import { KeyRound, ShieldCheck, LogOut, Fingerprint, ShieldAlert, Server } from "lucide-react";
+import { ServerTab } from "@/components/server-tab";
 import { toast } from "sonner";
 import {
   changePassword,
