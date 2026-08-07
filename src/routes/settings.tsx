@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { KeyRound, ShieldCheck, LogOut, Fingerprint, ShieldAlert } from "lucide-react";
+import { KeyRound, ShieldCheck, LogOut, Fingerprint, ShieldAlert, Server } from "lucide-react";
+import { ServerTab } from "@/components/server-tab";
 import { toast } from "sonner";
 import {
   changePassword,
@@ -34,7 +35,7 @@ function SettingsPage() {
   useApiSubscription();
   const { t } = useT();
   const me = useCurrentUser();
-  const [tab, setTab] = useState<"security" | "gold">("security");
+  const [tab, setTab] = useState<"security" | "gold" | "server">("security");
   if (!me) return null;
 
   return (
@@ -45,7 +46,7 @@ function SettingsPage() {
       </div>
 
       <div className="flex bg-card rounded-full p-1 shadow-card text-sm font-medium">
-        {(["security", "gold"] as const).map((k) => (
+        {(["security", "gold", "server"] as const).map((k) => (
           <button
             key={k}
             onClick={() => setTab(k)}
@@ -54,13 +55,19 @@ function SettingsPage() {
               tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground",
             )}
           >
-            {k === "security" ? <KeyRound className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
-            {k === "security" ? t("security") : t("goldMark")}
+            {k === "security" ? (
+              <KeyRound className="h-4 w-4" />
+            ) : k === "gold" ? (
+              <ShieldCheck className="h-4 w-4" />
+            ) : (
+              <Server className="h-4 w-4" />
+            )}
+            {k === "security" ? t("security") : k === "gold" ? t("goldMark") : "Server"}
           </button>
         ))}
       </div>
 
-      {tab === "security" ? <SecurityTab /> : <GoldTab />}
+      {tab === "security" ? <SecurityTab /> : tab === "gold" ? <GoldTab /> : <ServerTab />}
 
       <button
         onClick={signOut}

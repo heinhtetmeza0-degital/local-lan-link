@@ -5,6 +5,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  useHydrated,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
@@ -16,6 +17,7 @@ import { useCurrentUser } from "@/lib/use-api";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/lib/i18n";
 import { registerServiceWorker } from "@/lib/register-sw";
+import { startAutoSync } from "@/lib/pocketbase";
 
 function NotFoundComponent() {
   return (
@@ -102,7 +104,11 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function AuthGate() {
+  const hydrated = useHydrated();
   const me = useCurrentUser();
+  // The session lives in localStorage, which the server cannot read — wait for
+  // hydration so the first client render matches the server HTML.
+  if (!hydrated) return <div className="min-h-screen bg-background" aria-hidden />;
   if (!me) return <AuthScreen />;
   return (
     <AppShell me={me}>
@@ -115,6 +121,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   useEffect(() => {
     registerServiceWorker();
+    startAutoSync();
   }, []);
   return (
     <LanguageProvider>
