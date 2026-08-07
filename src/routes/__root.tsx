@@ -5,6 +5,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  useHydrated,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
