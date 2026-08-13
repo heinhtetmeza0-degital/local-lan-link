@@ -109,6 +109,18 @@ export type Ad = {
   createdAt: number;
 };
 
+export type AppSettings = {
+  appName: string;
+  tagline: string;
+  allowSignups: boolean;
+  maintenance: boolean;
+  maintenanceMessage: string;
+  allowPosting: boolean;
+  allowMedia: boolean;
+  showAds: boolean;
+  defaultLang: "en" | "mm";
+};
+
 const K = {
   users: "shwe_users",
   passwords: "shwe_pw",
@@ -124,9 +136,12 @@ const K = {
   ads: "shwe_ads",
   saved: "shwe_saved",
   biometric: "shwe_biometric",
+  banned: "shwe_banned",
+  settings: "shwe_settings",
   session: "shwe_session",
   seeded: "shwe_seeded_v2",
 };
+
 
 
 
@@ -290,7 +305,10 @@ export function signUp(input: {
   avatar?: string | null;
 }): User {
   ensureSeed();
+  if (!getAppSettings().allowSignups)
+    throw new Error("New sign-ups are currently disabled by the app owner.");
   const username = input.username.trim().toLowerCase();
+
   if (!/^[a-z0-9_]{3,20}$/.test(username))
     throw new Error("Username must be 3-20 chars: letters, numbers, underscore.");
   if (input.password.length < 4) throw new Error("Password must be at least 4 characters.");
@@ -320,10 +338,12 @@ export function signIn(username: string, password: string): User {
   const users = read<User[]>(K.users, []);
   const user = users.find((x) => x.username === u);
   if (!user || !verifyPassword(password, pw[u])) throw new Error("Invalid username or password.");
+  if (isBanned(user.id)) throw new Error("This account has been suspended by the app owner.");
   localStorage.setItem(K.session, user.id);
   emit();
   return user;
 }
+
 
 export function signOut() {
   localStorage.removeItem(K.session);
@@ -745,4 +765,194 @@ export function blobToDataUrl(blob: Blob): Promise<string> {
     r.onerror = reject;
     r.readAsDataURL(blob);
   });
+}
+
+/* ==================================================================
+ * OWNER CONTROL CENTRE — everything below is admin/owner only.
+ * ================================================================== */
+
+const DEFAULT_SETTINGS: AppSettings = {
+  appName: "Shwe Meza",
+  tagline: "ရွှေမဲဇာ",
+  allowSignups: true,
+  maintenance: false,
+  maintenanceMessage: "Shwe Meza is under maintenance. Please check back soon.",
+  allowPosting: true,
+  allowMedia: true,
+  showAds: true,
+  defaultLang: "en",
+};
+
+export function getAppSettings(): AppSettings {
+  return { ...DEFAULT_SETTINGS, ...read<Partial<AppSettings>>(K.settings, {}) };
+}
+
+export function updateAppSettings(patch: Partial<AppSettings>) {
+  requireAdmin();
+  write(K.settings, { ...getAppSettings(), ...patch });
+}
+
+function requireAdmin() {
+  if (!isAdmin(getCurrentUserId())) throw new Error("Admin only");
+}
+
+/* -------------------- bans -------------------- */
+function bannedMap(): Record<string, boolean> {
+  return read<Record<string, boolean>>(K.banned, {});
+}
+export function isBanned(userId: string): boolean {
+  return !!bannedMap()[userId];
+}
+export function setUserBanned(userId: string, banned: boolean) {
+  requireAdmin();
+  if (userId === getCurrentUserId()) throw new Error("You cannot ban yourself.");
+  const map = bannedMap();
+  if (banned) map[userId] = true;
+  else delete map[userId];
+  write(K.banned, map);
+}
+
+/* -------------------- user management -------------------- */
+export function setUserAdmin(userId: string, value: boolean) {
+  requireAdmin();
+  if (userId === getCurrentUserId() && !value)
+    throw new Error("You cannot remove your own owner access.");
+  setPrivileges(userId, { isAdmin: value });
+}
+export function setUserVerified(userId: string, value: boolean) {
+  requireAdmin();
+  setPrivileges(userId, { verified: value });
+}
+export function adminSetPassword(userId: string, newPassword: string) {
+  requireAdmin();
+  if (newPassword.length < 4) throw new Error("Password must be at least 4 characters.");
+  const user = getUser(userId);
+  if (!user) throw new Error("User not found");
+  const pw = readPasswords();
+  pw[user.username] = hashPassword(newPassword);
+  write(K.passwords, pw);
+}
+export function adminUpdateUser(userId: string, patch: { displayName?: string; bio?: string }) {
+  requireAdmin();
+  write(
+    K.users,
+    read<User[]>(K.users, []).map((u) => (u.id === userId ? { ...u, ...patch } : u)),
+  );
+}
+/** Removes the user and every trace of their content. */
+export function adminDeleteUser(userId: string) {
+  requireAdmin();
+  if (userId === getCurrentUserId()) throw new Error("You cannot delete your own account.");
+  const user = getUser(userId);
+  const posts = read<Post[]>(K.posts, []).filter((p) => p.authorId !== userId);
+  write(K.posts, posts);
+  const keep = new Set(posts.map((p) => p.id));
+  write(
+    K.comments,
+    read<Comment[]>(K.comments, []).filter((c) => c.authorId !== userId && keep.has(c.postId)),
+  );
+  write(K.messages, read<Message[]>(K.messages, []).filter((m) => m.authorId !== userId));
+  write(
+    K.conversations,
+    read<Conversation[]>(K.conversations, []).filter((c) => !c.memberIds.includes(userId)),
+  );
+  write(K.notes, read<Notification[]>(K.notes, []).filter((n) => n.userId !== userId && n.actorId !== userId));
+  write(K.reports, read<Report[]>(K.reports, []).filter((r) => r.reporterId !== userId));
+  write(K.gold, read<GoldRequest[]>(K.gold, []).filter((g) => g.userId !== userId));
+  write(K.users, read<User[]>(K.users, []).filter((u) => u.id !== userId));
+  if (user) {
+    const pw = readPasswords();
+    delete pw[user.username];
+    write(K.passwords, pw);
+  }
+  const priv = readPrivStore();
+  delete priv[userId];
+  write(K.priv, priv);
+  const bans = bannedMap();
+  delete bans[userId];
+  write(K.banned, bans);
+}
+
+/* -------------------- content control -------------------- */
+export function adminDeletePost(postId: string) {
+  requireAdmin();
+  write(K.posts, read<Post[]>(K.posts, []).filter((p) => p.id !== postId));
+  write(K.comments, read<Comment[]>(K.comments, []).filter((c) => c.postId !== postId));
+}
+export function adminDeleteComment(commentId: string) {
+  requireAdmin();
+  write(K.comments, read<Comment[]>(K.comments, []).filter((c) => c.id !== commentId));
+}
+export function getAllComments(): Comment[] {
+  requireAdmin();
+  return read<Comment[]>(K.comments, []).sort((a, b) => b.createdAt - a.createdAt);
+}
+export function adminDeleteConversation(id: string) {
+  requireAdmin();
+  write(K.conversations, read<Conversation[]>(K.conversations, []).filter((c) => c.id !== id));
+  write(K.messages, read<Message[]>(K.messages, []).filter((m) => m.conversationId !== id));
+}
+export function getAllConversations(): Conversation[] {
+  requireAdmin();
+  return read<Conversation[]>(K.conversations, []).sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+/* -------------------- stats -------------------- */
+export function getAdminStats() {
+  return {
+    users: read<User[]>(K.users, []).length,
+    posts: read<Post[]>(K.posts, []).length,
+    comments: read<Comment[]>(K.comments, []).length,
+    messages: read<Message[]>(K.messages, []).length,
+    reports: read<Report[]>(K.reports, []).filter((r) => r.status === "pending").length,
+    gold: read<GoldRequest[]>(K.gold, []).filter((g) => g.status === "pending").length,
+    banned: Object.keys(bannedMap()).length,
+  };
+}
+
+/* -------------------- data control -------------------- */
+const BACKUP_KEYS = [
+  K.users, K.passwords, K.priv, K.posts, K.comments, K.likes, K.notes,
+  K.conversations, K.messages, K.reports, K.gold, K.ads, K.saved,
+  K.biometric, K.banned, K.settings,
+];
+
+export function exportAllData(): string {
+  requireAdmin();
+  const dump: Record<string, unknown> = { __app: "shwe-meza", __at: Date.now() };
+  for (const key of BACKUP_KEYS) dump[key] = read<unknown>(key, null);
+  return JSON.stringify(dump, null, 2);
+}
+
+export function importAllData(json: string) {
+  requireAdmin();
+  const parsed = JSON.parse(json) as Record<string, unknown>;
+  if (parsed["__app"] !== "shwe-meza") throw new Error("Not a Shwe Meza backup file.");
+  for (const key of BACKUP_KEYS) {
+    if (parsed[key] === undefined || parsed[key] === null) continue;
+    localStorage.setItem(key, JSON.stringify(parsed[key]));
+  }
+  emit();
+}
+
+/** Wipes all content but keeps user accounts. */
+export function wipeContent() {
+  requireAdmin();
+  write(K.posts, [] as Post[]);
+  write(K.comments, [] as Comment[]);
+  write(K.likes, {} as Record<string, string[]>);
+  write(K.notes, [] as Notification[]);
+  write(K.conversations, [] as Conversation[]);
+  write(K.messages, [] as Message[]);
+  write(K.reports, [] as Report[]);
+  write(K.saved, {} as Record<string, string[]>);
+}
+
+/** Full factory reset — everything, including accounts. */
+export function factoryReset() {
+  requireAdmin();
+  for (const key of [...BACKUP_KEYS, K.session, K.seeded, MIGRATED_KEY]) {
+    localStorage.removeItem(key);
+  }
+  emit();
 }

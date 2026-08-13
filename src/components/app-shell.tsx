@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { UserAvatar } from "./user-avatar";
 import { GoldBadge } from "./gold-badge";
 import { ShweMezaLogo } from "./logo";
-import { isAdmin, unreadCount, type User } from "@/lib/api";
+import { getAppSettings, isAdmin, unreadCount, type User } from "@/lib/api";
 import { useApiSubscription } from "@/lib/use-api";
 import { cn } from "@/lib/utils";
 import { LangToggle, useT } from "@/lib/i18n";
@@ -15,6 +15,9 @@ export function AppShell({ me, children }: { me: User; children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const unread = unreadCount(me.id);
   const admin = isAdmin(me.id);
+  const settings = getAppSettings();
+  const locked = settings.maintenance && !admin;
+
 
   const nav = [
     { to: "/", label: t("home"), icon: Home, match: (p: string) => p === "/" },
@@ -28,12 +31,14 @@ export function AppShell({ me, children }: { me: User; children: ReactNode }) {
       badge: unread,
     },
     {
-      to: `/profile/${me.username}` as const,
+      to: "/profile/$username",
+      params: { username: me.username },
       label: t("profile"),
       icon: UserIcon,
       match: (p: string) => p.startsWith("/profile"),
     },
   ] as const;
+
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -54,6 +59,8 @@ export function AppShell({ me, children }: { me: User; children: ReactNode }) {
                 <Link
                   key={n.to}
                   to={n.to}
+                  params={"params" in n ? n.params : undefined}
+
                   className={cn(
                     "relative px-3 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2",
                     active ? "text-primary bg-accent" : "text-muted-foreground hover:bg-accent",
@@ -101,7 +108,7 @@ export function AppShell({ me, children }: { me: User; children: ReactNode }) {
             >
               <SettingsIcon className="h-5 w-5" />
             </Link>
-            <Link to={`/profile/${me.username}`} className="relative">
+            <Link to="/profile/$username" params={{ username: me.username }} className="relative">
               <UserAvatar user={me} size={32} />
               {me.verified && (
                 <span className="absolute -bottom-0.5 -right-0.5 bg-card rounded-full p-[1px]">
@@ -113,7 +120,17 @@ export function AppShell({ me, children }: { me: User; children: ReactNode }) {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto w-full px-3 sm:px-4 py-4 pb-24 md:pb-8 flex-1">{children}</main>
+      <main className="max-w-2xl mx-auto w-full px-3 sm:px-4 py-4 pb-24 md:pb-8 flex-1">
+        {locked ? (
+          <div className="rounded-2xl bg-card shadow-card p-8 text-center space-y-2">
+            <h2 className="font-bold text-lg">{settings.appName}</h2>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{settings.maintenanceMessage}</p>
+          </div>
+        ) : (
+          children
+        )}
+      </main>
+
 
       <footer className="hidden md:block max-w-2xl mx-auto w-full px-4 py-4 text-center text-xs text-muted-foreground">
         {t("credit")}
@@ -127,6 +144,8 @@ export function AppShell({ me, children }: { me: User; children: ReactNode }) {
               <Link
                 key={n.to}
                 to={n.to}
+                params={"params" in n ? n.params : undefined}
+
                 className={cn(
                   "relative flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-medium",
                   active ? "text-primary" : "text-muted-foreground",
