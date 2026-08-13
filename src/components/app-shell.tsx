@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { UserAvatar } from "./user-avatar";
 import { GoldBadge } from "./gold-badge";
 import { ShweMezaLogo } from "./logo";
-import { isAdmin, unreadCount, type User } from "@/lib/api";
+import { getAppSettings, isAdmin, unreadCount, type User } from "@/lib/api";
 import { useApiSubscription } from "@/lib/use-api";
 import { cn } from "@/lib/utils";
 import { LangToggle, useT } from "@/lib/i18n";
@@ -15,6 +15,9 @@ export function AppShell({ me, children }: { me: User; children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const unread = unreadCount(me.id);
   const admin = isAdmin(me.id);
+  const settings = getAppSettings();
+  const locked = settings.maintenance && !admin;
+
 
   const nav = [
     { to: "/", label: t("home"), icon: Home, match: (p: string) => p === "/" },
