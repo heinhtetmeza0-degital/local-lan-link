@@ -305,7 +305,10 @@ export function signUp(input: {
   avatar?: string | null;
 }): User {
   ensureSeed();
+  if (!getAppSettings().allowSignups)
+    throw new Error("New sign-ups are currently disabled by the app owner.");
   const username = input.username.trim().toLowerCase();
+
   if (!/^[a-z0-9_]{3,20}$/.test(username))
     throw new Error("Username must be 3-20 chars: letters, numbers, underscore.");
   if (input.password.length < 4) throw new Error("Password must be at least 4 characters.");
