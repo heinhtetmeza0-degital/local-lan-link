@@ -91,7 +91,8 @@ export function CreatePost({ me }: { me: User }) {
       )}
 
       <div className="flex items-center justify-between border-t border-border pt-3 gap-2 flex-wrap">
-        <div className="flex gap-1 flex-wrap">
+        <div className={getAppSettings().allowMedia ? "flex gap-1 flex-wrap" : "hidden"}>
+
           <button
             type="button"
             onClick={() => imgRef.current?.click()}
