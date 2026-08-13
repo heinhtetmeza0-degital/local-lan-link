@@ -335,10 +335,12 @@ export function signIn(username: string, password: string): User {
   const users = read<User[]>(K.users, []);
   const user = users.find((x) => x.username === u);
   if (!user || !verifyPassword(password, pw[u])) throw new Error("Invalid username or password.");
+  if (isBanned(user.id)) throw new Error("This account has been suspended by the app owner.");
   localStorage.setItem(K.session, user.id);
   emit();
   return user;
 }
+
 
 export function signOut() {
   localStorage.removeItem(K.session);
