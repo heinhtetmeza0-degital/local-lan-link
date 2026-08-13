@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Image as ImageIcon, Film, X, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "./user-avatar";
-import { createPost, fileToDataUrl, type Media, type User } from "@/lib/api";
+import { createPost, fileToDataUrl, getAppSettings, type Media, type User } from "@/lib/api";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 import { VoiceRecorder, VoicePlayer, type VoiceResult } from "./voice-recorder";
