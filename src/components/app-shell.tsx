@@ -131,6 +131,8 @@ export function AppShell({ me, children }: { me: User; children: ReactNode }) {
               <Link
                 key={n.to}
                 to={n.to}
+                params={"params" in n ? n.params : undefined}
+
                 className={cn(
                   "relative flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-medium",
                   active ? "text-primary" : "text-muted-foreground",
