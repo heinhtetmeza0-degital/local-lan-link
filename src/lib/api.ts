@@ -109,6 +109,18 @@ export type Ad = {
   createdAt: number;
 };
 
+export type AppSettings = {
+  appName: string;
+  tagline: string;
+  allowSignups: boolean;
+  maintenance: boolean;
+  maintenanceMessage: string;
+  allowPosting: boolean;
+  allowMedia: boolean;
+  showAds: boolean;
+  defaultLang: "en" | "mm";
+};
+
 const K = {
   users: "shwe_users",
   passwords: "shwe_pw",
@@ -124,9 +136,12 @@ const K = {
   ads: "shwe_ads",
   saved: "shwe_saved",
   biometric: "shwe_biometric",
+  banned: "shwe_banned",
+  settings: "shwe_settings",
   session: "shwe_session",
   seeded: "shwe_seeded_v2",
 };
+
 
 
 
