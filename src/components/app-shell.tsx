@@ -28,12 +28,14 @@ export function AppShell({ me, children }: { me: User; children: ReactNode }) {
       badge: unread,
     },
     {
-      to: `/profile/${me.username}` as const,
+      to: "/profile/$username",
+      params: { username: me.username },
       label: t("profile"),
       icon: UserIcon,
       match: (p: string) => p.startsWith("/profile"),
     },
   ] as const;
+
 
   return (
     <div className="min-h-screen flex flex-col">
