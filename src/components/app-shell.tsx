@@ -120,7 +120,17 @@ export function AppShell({ me, children }: { me: User; children: ReactNode }) {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto w-full px-3 sm:px-4 py-4 pb-24 md:pb-8 flex-1">{children}</main>
+      <main className="max-w-2xl mx-auto w-full px-3 sm:px-4 py-4 pb-24 md:pb-8 flex-1">
+        {locked ? (
+          <div className="rounded-2xl bg-card shadow-card p-8 text-center space-y-2">
+            <h2 className="font-bold text-lg">{settings.appName}</h2>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{settings.maintenanceMessage}</p>
+          </div>
+        ) : (
+          children
+        )}
+      </main>
+
 
       <footer className="hidden md:block max-w-2xl mx-auto w-full px-4 py-4 text-center text-xs text-muted-foreground">
         {t("credit")}
