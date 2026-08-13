@@ -56,8 +56,8 @@ export function AppShell({ me, children }: { me: User; children: ReactNode }) {
                 <Link
                   key={n.to}
                   to={n.to}
-                params={"params" in n ? n.params : undefined}
                   params={"params" in n ? n.params : undefined}
+
                   className={cn(
                     "relative px-3 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2",
                     active ? "text-primary bg-accent" : "text-muted-foreground hover:bg-accent",
