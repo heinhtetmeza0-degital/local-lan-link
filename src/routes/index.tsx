@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CreatePost } from "@/components/create-post";
 import { PostCard } from "@/components/post-card";
 import { SponsoredCard } from "@/components/sponsored-card";
-import { getAds, getCurrentUserId, getPosts, getUser } from "@/lib/api";
+import { getAds, getAppSettings, getCurrentUserId, getPosts, getUser } from "@/lib/api";
 import { useApiSubscription } from "@/lib/use-api";
 import { useT } from "@/lib/i18n";
 
