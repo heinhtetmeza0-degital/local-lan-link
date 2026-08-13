@@ -41,7 +41,14 @@ function Feed() {
 
   return (
     <div className="space-y-4">
-      <CreatePost me={me} />
+      {settings.allowPosting ? (
+        <CreatePost me={me} />
+      ) : (
+        <div className="rounded-2xl bg-card shadow-card p-4 text-sm text-muted-foreground text-center">
+          ပို့စ်တင်ခြင်း ယာယီ ပိတ်ထားပါသည် / Posting is currently disabled by the owner.
+        </div>
+      )}
+
       {posts.length === 0 && ads.length === 0 ? (
         <div className="rounded-2xl bg-card shadow-card p-8 text-center text-muted-foreground">
           {t("noPostsFeed")}
