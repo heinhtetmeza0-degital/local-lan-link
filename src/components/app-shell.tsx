@@ -103,7 +103,7 @@ export function AppShell({ me, children }: { me: User; children: ReactNode }) {
             >
               <SettingsIcon className="h-5 w-5" />
             </Link>
-            <Link to={`/profile/${me.username}`} className="relative">
+            <Link to="/profile/$username" params={{ username: me.username }} className="relative">
               <UserAvatar user={me} size={32} />
               {me.verified && (
                 <span className="absolute -bottom-0.5 -right-0.5 bg-card rounded-full p-[1px]">
