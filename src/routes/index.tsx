@@ -23,9 +23,11 @@ function Feed() {
   const { t } = useT();
   const meId = getCurrentUserId();
   const me = meId ? getUser(meId) : null;
+  const settings = getAppSettings();
   const posts = getPosts();
-  const ads = getAds();
+  const ads = settings.showAds ? getAds() : [];
   if (!me) return null;
+
 
   const items: Array<{ kind: "post"; id: string; node: React.ReactNode } | { kind: "ad"; id: string; node: React.ReactNode }> = [];
   posts.forEach((p, i) => {
